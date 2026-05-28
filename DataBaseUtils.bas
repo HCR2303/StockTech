@@ -133,7 +133,7 @@ Function DatoDataBase(ByVal tabla As String, ByVal Filtro As String, ByVal valor
     
     ' 2. Construcción de la Consulta SQL
     SQL = "SELECT [" & Resultado & "] FROM [" & tabla & "] " & _
-          "WHERE [" & Filtro & "] = " & criterio
+          "WHERE [" & Filtro & "] = " & CStr(criterio)
           
     On Error GoTo ManejadorErrores
     
@@ -663,37 +663,57 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
     Dim cambios As Long, addedElement As Long
     Dim ColumnaIdName As String
     Dim filaNecesitaUpdate As Boolean
+    Dim valCelda As Variant
     
+    ' =======================================================
+    ' 1. ESCUDO DE INTERRUPCIÓN
+    ' =======================================================
     On Error GoTo ErrorHandler
     
-    ' ... (Configuración inicial de entorno idéntica a la anterior) ...
     Set con = DataBaseUtils.GetDBConnection()
     Set hoja = ActiveWorkbook.Worksheets(tabla)
     Set SelectedTable = hoja.ListObjects(1)
     
     Set rs = CreateObject("ADODB.Recordset")
+    ' 1 = adOpenKeyset, 3 = adLockOptimistic
     rs.Open "SELECT * FROM [" & tabla & "]", con, 1, 3
     
     ColumnaIdName = rs.Fields(0).Name
     strModificados = ""
     strNuevos = ""
 
+    ' =======================================================
+    ' 2. BUCLE PRINCIPAL DE SINCRONIZACIÓN
+    ' =======================================================
     For filaTable = 1 To SelectedTable.ListRows.Count
         filaNecesitaUpdate = False
         idBusqueda = SelectedTable.ListColumns(1).DataBodyRange(filaTable).Value
         
-        If Not IsEmpty(idBusqueda) And idBusqueda <> 0 Then
-            rs.Filter = "[" & ColumnaIdName & "] = " & idBusqueda
+        ' --- LA CORRECCIÓN CRÍTICA (Blindaje contra Error 13) ---
+        ' Usamos Trim y Val para forzar la conversión matemática segura
+        If Trim(CStr(idBusqueda)) <> "" And Val(idBusqueda) <> 0 Then
+            rs.Filter = "[" & ColumnaIdName & "] = " & CLng(idBusqueda)
         Else
+            ' Si la celda está vacía o tiene letras, forzamos el EOF (-1)
             rs.Filter = "[" & ColumnaIdName & "] = -1"
         End If
 
         If Not rs.EOF Then
-            ' --- LÓGICA DE ACTUALIZACIÓN ---
+            ' =======================================================
+            ' A. LÓGICA DE ACTUALIZACIÓN
+            ' =======================================================
             For Each columna In SelectedTable.ListColumns
                 If columna.Index <> 1 Then
-                    If CStr(rs.Fields(columna.Name).Value & "") <> CStr(columna.DataBodyRange(filaTable).Value & "") Then
-                        rs.Fields(columna.Name).Value = columna.DataBodyRange(filaTable).Value
+                    valCelda = columna.DataBodyRange(filaTable).Value
+                    
+                    ' Validamos si hubo un cambio real
+                    If CStr(rs.Fields(columna.Name).Value & "") <> CStr(valCelda & "") Then
+                        ' Inyección Segura
+                        If Trim(CStr(valCelda)) = "" Then
+                            rs.Fields(columna.Name).Value = Null
+                        Else
+                            rs.Fields(columna.Name).Value = valCelda
+                        End If
                         filaNecesitaUpdate = True
                     End If
                 End If
@@ -702,33 +722,45 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
             If filaNecesitaUpdate Then
                 rs.Update
                 cambios = cambios + 1
-                ' Acumulamos el ID modificado
                 strModificados = strModificados & IIf(strModificados = "", "", ", ") & idBusqueda
             End If
             
         Else
-            ' --- LÓGICA DE ADICIÓN ---
-            rs.Filter = 0 ' adFilterNone
+            ' =======================================================
+            ' B. LÓGICA DE ADICIÓN (Altas Nuevas)
+            ' =======================================================
+            rs.Filter = 0 ' Limpiamos el filtro estrictamente antes de agregar
             rs.AddNew
-            addedElement = addedElement + 1
             
             For Each columna In SelectedTable.ListColumns
                 If columna.Index <> 1 Then
-                    rs.Fields(columna.Name).Value = columna.DataBodyRange(filaTable).Value
+                    valCelda = columna.DataBodyRange(filaTable).Value
+                    
+                    ' Inyección Segura: Convertimos celdas vacías a Null SQL
+                    If Trim(CStr(valCelda)) = "" Then
+                        rs.Fields(columna.Name).Value = Null
+                    Else
+                        rs.Fields(columna.Name).Value = valCelda
+                    End If
                 End If
             Next columna
             
             rs.Update
-            ' CAPTURA CRÍTICA: Tras el Update, Access nos devuelve el ID autonumérico generado
+            addedElement = addedElement + 1
+            
+            ' Captura del ID generado por Access
             Dim nuevoID As Long
             nuevoID = rs.Fields(ColumnaIdName).Value
             strNuevos = strNuevos & IIf(strNuevos = "", "", ", ") & nuevoID
         End If
         
+        ' Limpieza del filtro para la siguiente fila
         rs.Filter = 0
     Next
 
-    ' 3. Construcción del String de Retorno para el AuditTrail
+    ' =======================================================
+    ' 3. REPORTE Y TRAZABILIDAD (Audit Trail)
+    ' =======================================================
     Dim reporteFinal As String
     reporteFinal = ""
     
@@ -739,13 +771,16 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
     
     UpdateTable = IIf(reporteFinal = "", "SIN CAMBIOS", reporteFinal)
 
+    ' =======================================================
+    ' 4. NOTIFICACIÓN Y RECARGA
+    ' =======================================================
     If cambios > 0 Or addedElement > 0 Then
         If Not Silencio Then
-        MsgBox "Sincronización de la tabla '" & tabla & "' completada:" & vbCrLf & _
-               "- Registros modificados: " & cambios & vbCrLf & _
-               "- Registros nuevos: " & addedElement, vbInformation, "StockTech Sync"
+            MsgBox "Sincronización de la tabla '" & tabla & "' completada:" & vbCrLf & _
+                   "- Registros modificados: " & cambios & vbCrLf & _
+                   "- Registros nuevos: " & addedElement, vbInformation, "StockTech Sync"
         End If
-        ' Refrescamos para bajar los IDs generados
+        ' Refrescamos la tabla para mostrar los Autonuméricos generados
         Call DataBaseUtils.GetExcelTable(tabla, refresh:=True)
     End If
 
@@ -756,11 +791,11 @@ limpieza:
         Set rs = Nothing
     End If
     Application.ScreenUpdating = True
-    
     Exit Function
 
 ErrorHandler:
-    App.SystemError "Excepción en trazabilidad de UpdateTable - " & Err.Description
+    ' Modificado para mostrar exactamente por qué falló si vuelve a ocurrir
+    App.SystemError "Excepción crítica en UpdateTable [" & tabla & "] - Error de Ejecución: " & Err.Description
     UpdateTable = "ERROR"
     Resume limpieza
 End Function
