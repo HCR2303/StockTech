@@ -277,7 +277,7 @@ Sub BloquearSistema(Optional automatico As Boolean = True)
     On Error GoTo 0
     
     Set Seguridad.LibroStockTech = Nothing
-    
+    Call Seguridad.UnlockBook
 End Sub
 Sub IniciarTemporizador()
 '    Call DetenerTemporizador

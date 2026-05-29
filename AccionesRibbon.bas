@@ -411,6 +411,6 @@ Public Sub VerUserDetails(ByVal user As String)
     ' =======================================================
     ' 5. CIERRE, SEGURIDAD Y UX
     ' =======================================================
-    Call Seguridad.LockSheet(ws)
+    Call Seguridad.UnmarkStockTechSheet(ws)
     Call App.EnfocarStockTechLabels
 End Sub

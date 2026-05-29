@@ -852,13 +852,17 @@ Public Function GetExcelTable(ByVal nombreTabla As String, _
             End If
         End If
         Application.DisplayAlerts = False
+        Seguridad.UnlockBook
         ws.Delete
+        
         Application.DisplayAlerts = True
     End If
 
     ' 3. Creación de la Hoja
+    
     Set ws = ActiveWorkbook.Sheets.Add(After:=ActiveWorkbook.Sheets(ActiveWorkbook.Sheets.Count))
     ws.Name = nombreTabla
+    Seguridad.LockBook
     Call Seguridad.MarkStockTechSheet(ws)
 
     ' 4. Escritura de Encabezados (Fila 1)

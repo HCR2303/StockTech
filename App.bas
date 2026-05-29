@@ -110,7 +110,7 @@ Sub Start(control As IRibbonControl)
             Call StartReadEvents
             Call Seguridad.IniciarTemporizador
             ' --------------------------------------
-            
+            Call Seguridad.LockBook
             MsgBox "Auditoría de StockTech en curso." & vbNewLine & "El sistema está monitoreando la actividad.", vbInformation, "Sesión Iniciada"
         End If
         
