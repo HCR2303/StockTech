@@ -94,50 +94,105 @@ Function GetMatrix()
     
 End Function
 
-Private Sub RefaccionCodigo_Click()
+Private Sub RefaccionCodigo_Change()
+    Dim fila As Long
     fila = RefaccionCodigo.ListIndex
     
-    If fila = -1 Or RefaccionCodigo = Empty Then
-        Rrojo.Visible = False
-        ramarillo.Visible = False
-        Rverde.Visible = False
-        Nulo.Visible = False
-        Exit Sub
+    ' =======================================================
+    ' ESCUDO DE COINCIDENCIA EXACTA
+    ' =======================================================
+    ' Verificamos que el índice exista y que la caja no esté vacía.
+    If fila <> -1 And Trim(RefaccionCodigo.Value) <> "" Then
+        
+        ' Comparamos el texto escrito con el texto real del elemento en la lista.
+        If UCase(RefaccionCodigo.Value) = UCase(RefaccionCodigo.List(fila)) Then
+            ' La coincidencia es absoluta. Procedemos a renderizar.
+            Call RefreshRefaction
+            Exit Sub
+        End If
+        
     End If
     
-    RefreshRefaction
-    
+    ' =======================================================
+    ' ESTADO DE ESPERA (Limpieza Visual)
+    ' =======================================================
+    ' Si no hay coincidencia exacta (el usuario sigue escribiendo),
+    ' mandamos la señal de limpiar la interfaz.
+    Call RefreshRefaction(LimpiarPantalla:=True)
 End Sub
-Function RefreshRefaction(Optional UltimoDato As Boolean = False)
+
+' Mantenemos el Click como redundancia de seguridad para el uso del ratón.
+Private Sub RefaccionCodigo_Click()
+    Call RefaccionCodigo_Change
+End Sub
+Function RefreshRefaction(Optional UltimoDato As Boolean = False, Optional LimpiarPantalla As Boolean = False)
+    Dim fila As Long
+    Dim Criticidad As String
     
+    ' =======================================================
+    ' MODO LIMPIEZA (Señal de Espera)
+    ' =======================================================
+    If LimpiarPantalla Then
+        RefaccionName.Caption = ""
+        Stock.Caption = ""
+        
+        Rrojo.Visible = False
+        Ramarillo.Visible = False
+        Rverde.Visible = False
+        Nulo.Visible = False
+        Exit Function
+    End If
+    
+    ' =======================================================
+    ' MODO EXTRACCIÓN Y RENDERIZADO
+    ' =======================================================
     fila = RefaccionCodigo.ListIndex
     
     If UltimoDato Then
         fila = CInt(UBound(RefaccionMatrix, 2))
     End If
     
-    RefaccionName.Caption = RefaccionMatrix(2, fila)
+    ' Inyección segura a los Labels (previene Error 13 por nulos)
+    RefaccionName.Caption = RefaccionMatrix(2, fila) & ""
     Stock.Caption = RefaccionMatrix(4, fila) & " " & RefaccionMatrix(3, fila)
-    Criticidad = RefaccionMatrix(6, fila)
+    If UCase(RefaccionCodigo.Value) Like "SER" & "*" Then
+        Me.Unidades.Visible = False
+        Me.UnidadesLabel.Visible = False
+    End If
+    ' =======================================================
+    ' SEMÁFORO DE CRITICIDAD Y BLINDAJE DE TEXTO
+    ' =======================================================
+    ' Aplicamos LCase y Trim para estandarizar el texto y evitar que
+    ' un espacio accidental (ej. "alto ") rompa la lectura.
+    Criticidad = LCase(Trim(RefaccionMatrix(6, fila) & ""))
+    
     Select Case Criticidad
         Case "alto"
             Rrojo.Visible = True
-            ramarillo.Visible = False
+            Ramarillo.Visible = False
             Rverde.Visible = False
             Nulo.Visible = False
+            
         Case "medio"
             Rrojo.Visible = False
-            ramarillo.Visible = True
+            Ramarillo.Visible = True
             Rverde.Visible = False
             Nulo.Visible = False
+            
         Case "bajo"
             Rrojo.Visible = False
-            ramarillo.Visible = False
+            Ramarillo.Visible = False
             Rverde.Visible = True
             Nulo.Visible = False
+            
         Case Else
+            ' Se activa el estado Nulo y se apagan estrictamente los demás
+            Rrojo.Visible = False
+            Me.Ramarillo.Visible = False
+            Rverde.Visible = False
             Nulo.Visible = True
     End Select
+    
 End Function
 Private Sub RefaccionNueva_Click()
     Unload Me
@@ -163,7 +218,7 @@ Private Sub RegisSOLPED_Click()
             If TypeOf espacio Is MSForms.ComboBox Or TypeOf espacio Is MSForms.TextBox Then
                 If Trim(espacio.Text) = vbNullString Then
                     ' ProveedorCodigo es opcional según lógica previa
-                    If espacio.Name <> "ProveedorCodigo" Then
+                    If espacio.Name <> "ProveedorCodigo" And espacio.Visible = True Then
                         nuloCount = nuloCount + 1
                     End If
                 End If
@@ -321,32 +376,77 @@ Private Sub UserForm_Activate()
     End If
     
 End Sub
-Private Sub CodigoEquipo_Click()
+Private Sub CodigoEquipo_Change()
+    Dim fila As Long
     fila = CodigoEquipo.ListIndex
     
-    If fila = -1 Or CodigoEquipo = Empty Then
+    ' =======================================================
+    ' COINCIDENCIA EXACTA
+    ' =======================================================
+    ' Evaluamos si el texto escrito en la caja es estrictamente
+    ' idéntico al elemento que VBA está intentando autoseleccionar.
+    If fila <> -1 And Trim(CodigoEquipo.Value) <> "" Then
+        
+        ' UCase asegura que no falle por diferencias de mayúsculas/minúsculas
+        If UCase(CodigoEquipo.Value) = UCase(CodigoEquipo.List(fila)) Then
+            ' Solo si hay coincidencia perfecta, disparamos el motor
+            Call RefreshEquipment
+            Exit Sub
+        End If
+        
+    End If
+    
+    ' =======================================================
+    ' ESTADO DE ESPERA (Limpieza Visual)
+    ' =======================================================
+    ' Si el usuario sigue escribiendo o no hay coincidencia exacta,
+    ' enviamos una bandera True para limpiar la pantalla y evitar fantasmas.
+    Call RefreshEquipment(LimpiarPantalla:=True)
+End Sub
+
+' Mantenemos el Click como respaldo por si el operador usa el ratón
+Private Sub CodigoEquipo_Click()
+    Call CodigoEquipo_Change
+End Sub
+Function RefreshEquipment(Optional UltimoDato As Boolean = False, Optional LimpiarPantalla As Boolean = False)
+    Dim fila As Long
+    Dim Criticidad As String
+    
+    ' =======================================================
+    ' MODO LIMPIEZA (El usuario está escribiendo o borró el dato)
+    ' =======================================================
+    If LimpiarPantalla Then
+        EquipName.Caption = ""
+        MarcaEquipo.Caption = ""
+        ModeloEquipo.Caption = ""
+        Ubicacion.Caption = ""
+        
         CriticidadRed.Visible = False
         CriticidadYellow.Visible = False
         CriticidadGreen.Visible = False
-        
-        Exit Sub
+        Exit Function
     End If
-    RefreshEquipment
-End Sub
-Function RefreshEquipment(Optional UltimoDato As Boolean = False)
     
+    ' =======================================================
+    ' MODO EXTRACCIÓN Y RENDERIZADO
+    ' =======================================================
     fila = CodigoEquipo.ListIndex
+    
     If UltimoDato Then
         fila = CInt(UBound(EquiposMatrix, 2))
     End If
     
+    ' Inyección segura a los Labels
     EquipName.Caption = EquiposMatrix(2, fila) & ""
     MarcaEquipo.Caption = EquiposMatrix(3, fila) & ""
     ModeloEquipo.Caption = EquiposMatrix(4, fila) & ""
     Ubicacion.Caption = EquiposMatrix(15, fila) & ""
     
-    Dim Criticidad As String
-    Criticidad = LCase(EquiposMatrix(8, fila) & "")
+    ' =======================================================
+    ' SEMÁFORO DE CRITICIDAD
+    ' =======================================================
+    Criticidad = LCase(Trim(EquiposMatrix(8, fila) & ""))
+    
     Select Case Criticidad
         Case "alto"
             CriticidadRed.Visible = True
@@ -357,6 +457,7 @@ Function RefreshEquipment(Optional UltimoDato As Boolean = False)
             CriticidadYellow.Visible = True
             CriticidadGreen.Visible = False
         Case Else
+            ' Asumimos que cualquier otro valor (o vacío) es criticidad baja/verde
             CriticidadRed.Visible = False
             CriticidadYellow.Visible = False
             CriticidadGreen.Visible = True

@@ -38,15 +38,19 @@ Function GetMatrix()
 End Function
 
 
-Private Sub RefaccionCodigo_Click()
+Private Sub RefaccionCodigo_Change()
     fila = RefaccionCodigo.ListIndex
     
     If fila = -1 Or RefaccionCodigo = Empty Then
         Rrojo.Visible = False
-        ramarillo.Visible = False
+        Ramarillo.Visible = False
         Rverde.Visible = False
         Nulo.Visible = False
         Exit Sub
+    End If
+    If UCase(RefaccionCodigo.Value) Like "SER" & "*" Then
+        Me.Unidades.Value = 1
+        Me.Unidades.Enabled = False
     End If
     RefaccionName.Caption = RefaccionMatrix(2, fila)
     Stock.Caption = RefaccionMatrix(4, fila) & " " & RefaccionMatrix(3, fila)
@@ -54,17 +58,17 @@ Private Sub RefaccionCodigo_Click()
     Select Case Criticidad
         Case "alto"
             Rrojo.Visible = True
-            ramarillo.Visible = False
+            Ramarillo.Visible = False
             Rverde.Visible = False
             Nulo.Visible = False
         Case "medio"
             Rrojo.Visible = False
-            ramarillo.Visible = True
+            Ramarillo.Visible = True
             Rverde.Visible = False
             Nulo.Visible = False
         Case "bajo"
             Rrojo.Visible = False
-            ramarillo.Visible = False
+            Ramarillo.Visible = False
             Rverde.Visible = True
             Nulo.Visible = False
         Case Else

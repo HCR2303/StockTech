@@ -854,12 +854,12 @@ Public Function GetExcelTable(ByVal nombreTabla As String, _
         Application.DisplayAlerts = False
         Seguridad.UnlockBook
         ws.Delete
-        
+        Seguridad.LockBook
         Application.DisplayAlerts = True
     End If
 
     ' 3. Creación de la Hoja
-    
+    Seguridad.UnlockBook
     Set ws = ActiveWorkbook.Sheets.Add(After:=ActiveWorkbook.Sheets(ActiveWorkbook.Sheets.Count))
     ws.Name = nombreTabla
     Seguridad.LockBook

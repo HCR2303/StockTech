@@ -85,8 +85,8 @@ Private Sub RegisCosto_Click()
     Dim valoresU As Variant
     registroSOLPED = False
     If LCase(ref) Like "serv" & "*" Then
-        camposU = Array(CampoDB(TSOLPEDs, spd_orden_compra), CampoDB(TSOLPEDs, spd_no_factura), CampoDB(TSOLPEDs, spd_costo))
-        valoresU = Array(Me.OCompra.Text, Me.NoFactura.Text, CDbl(Me.Costo.Text))
+        camposU = Array(CampoDB(TSOLPEDs, spd_orden_compra), CampoDB(TSOLPEDs, spd_no_factura), CampoDB(TSOLPEDs, spd_unidades), CampoDB(TSOLPEDs, spd_costo))
+        valoresU = Array(Me.OCompra.Text, Me.NoFactura.Text, 1, CDbl(Me.Costo.Text))
     Else
         camposU = Array(CampoDB(TSOLPEDs, spd_orden_compra), CampoDB(TSOLPEDs, spd_no_factura), CampoDB(TSOLPEDs, spd_unidades), CampoDB(TSOLPEDs, spd_costo))
         valoresU = Array(Me.OCompra.Text, Me.NoFactura.Text, CInt(Me.Unidades.Text), CDbl(Me.Costo.Text))
