@@ -23,7 +23,7 @@ Private Sub LogIn_Click()
     Dim uso As String
     
     pass = Me.PasswordUser.Text
-    SetCurrentUser (LCase(Me.UserName.Text))
+    SetCurrentUser (UCase(Me.UserName.Text))
     USERLOGGED = GetCurrentUser
     uso = Me.Caption
     
@@ -42,7 +42,7 @@ Private Sub LogIn_Click()
                 Exit Sub
             End If
         Else
-            GlobalWHO = Me.UserName.Text
+            GlobalWHO = UCase(Me.UserName.Text)
         End If
         Call App.StartReadEvents
         ' Si el inicio de sesión fue exitoso se cierra el formulario

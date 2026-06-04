@@ -201,7 +201,76 @@ ErrorHandler:
     Call App.SystemError("Error en SeleccionColumnasTabla: " & Err.Description)
     Resume SalidaSegura
 End Sub
+Public Sub OcultarColumnasTabla(ByVal tabla As String, ByVal CamposAOcultar As Variant)
+    Dim ws As Worksheet
+    Dim lo As ListObject
+    Dim i As Long
+    Dim arrCampos As Variant
+    Dim nombreColumna As String
+    
+    ' =======================================================
+    ' PASO 1: ESCUDO DE INTERRUPCIÓN Y CONGELAMIENTO VISUAL
+    ' =======================================================
+    On Error GoTo ErrorHandler
+    Application.ScreenUpdating = False
+    
+    Set ws = ActiveWorkbook.Worksheets(tabla)
+    
+    ' Validamos que la hoja tenga al menos una tabla oficial para evitar Error 9
+    If ws.ListObjects.Count = 0 Then GoTo SalidaSegura
+    Set lo = ws.ListObjects(1)
+    
+    ' =======================================================
+    ' PASO 2: CARGA DEL DICCIONARIO DE DATOS
+    ' =======================================================
+    ' Extraemos la matriz de encabezados originales de la base de datos
+    arrCampos = TablasDB.CamposTablaDB(tabla)
+    
+    ' =======================================================
+    ' PASO 3: ITERACIÓN Y TRADUCCIÓN HÍBRIDA
+    ' =======================================================
+    For i = LBound(CamposAOcultar) To UBound(CamposAOcultar)
+        
+        ' Evaluamos si el desarrollador inyectó un número (Enum) o un Texto
+        If IsNumeric(CamposAOcultar(i)) Then
+            
+            ' Escudo de límites: Aseguramos que el número exista en el diccionario
+            If CamposAOcultar(i) >= LBound(arrCampos) And CamposAOcultar(i) <= UBound(arrCampos) Then
+                nombreColumna = arrCampos(CamposAOcultar(i))
+            Else
+                nombreColumna = ""
+            End If
+            
+        Else
+            ' Si es texto, lo tomamos de manera literal
+            nombreColumna = CStr(CamposAOcultar(i))
+        End If
+        
+        ' =======================================================
+        ' PASO 4: OCULTAMIENTO QUIRÚRGICO FÍSICO
+        ' =======================================================
+        If nombreColumna <> "" Then
+            ' Encendemos On Error Resume Next estrictamente para esta línea.
+            ' Si la columna ya fue borrada o no existe, la macro no colapsará.
+            On Error Resume Next
+            lo.ListColumns(nombreColumna).Range.EntireColumn.Hidden = True
+            On Error GoTo ErrorHandler ' Restauramos el escudo global inmediatamente
+        End If
+        
+    Next i
 
+SalidaSegura:
+    ' =======================================================
+    ' PASO 5: RESTAURACIÓN DE INTERFAZ Y SALIDA
+    ' =======================================================
+    Application.ScreenUpdating = True
+    Exit Sub
+    
+ErrorHandler:
+    ' Trazabilidad del error hacia el motor principal
+    Call App.SystemError("Error en OcultarColumnasTabla: " & Err.Description)
+    Resume SalidaSegura
+End Sub
 Public Function ExisteTabla(ByVal nombreTabla As String) As Boolean
     Dim lo As ListObject
     On Error Resume Next

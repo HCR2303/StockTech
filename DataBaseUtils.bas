@@ -435,7 +435,7 @@ Public Function LogDB(ByVal accion As String, ByVal objetivo As String, ByVal de
     
     tabla = TAuditTrail
         
-    If DataBaseUtils.Auditoria(Environ("USERNAME"), accion, objetivo, detalles, comentarios) Then
+    If DataBaseUtils.Auditoria(UCase(Environ("USERNAME")), accion, objetivo, detalles, comentarios) Then
         LogDB = True
     End If
 End Function
@@ -689,26 +689,20 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
         filaNecesitaUpdate = False
         idBusqueda = SelectedTable.ListColumns(1).DataBodyRange(filaTable).Value
         
-        ' --- LA CORRECCIÓN CRÍTICA (Blindaje contra Error 13) ---
-        ' Usamos Trim y Val para forzar la conversión matemática segura
+        ' --- Blindaje contra Error 13 ---
         If Trim(CStr(idBusqueda)) <> "" And Val(idBusqueda) <> 0 Then
             rs.Filter = "[" & ColumnaIdName & "] = " & CLng(idBusqueda)
         Else
-            ' Si la celda está vacía o tiene letras, forzamos el EOF (-1)
             rs.Filter = "[" & ColumnaIdName & "] = -1"
         End If
 
         If Not rs.EOF Then
-            ' =======================================================
-            ' A. LÓGICA DE ACTUALIZACIÓN
-            ' =======================================================
+            ' --- A. LÓGICA DE ACTUALIZACIÓN ---
             For Each columna In SelectedTable.ListColumns
                 If columna.Index <> 1 Then
                     valCelda = columna.DataBodyRange(filaTable).Value
                     
-                    ' Validamos si hubo un cambio real
                     If CStr(rs.Fields(columna.Name).Value & "") <> CStr(valCelda & "") Then
-                        ' Inyección Segura
                         If Trim(CStr(valCelda)) = "" Then
                             rs.Fields(columna.Name).Value = Null
                         Else
@@ -726,17 +720,14 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
             End If
             
         Else
-            ' =======================================================
-            ' B. LÓGICA DE ADICIÓN (Altas Nuevas)
-            ' =======================================================
-            rs.Filter = 0 ' Limpiamos el filtro estrictamente antes de agregar
+            ' --- B. LÓGICA DE ADICIÓN (Altas Nuevas) ---
+            rs.Filter = 0
             rs.AddNew
             
             For Each columna In SelectedTable.ListColumns
                 If columna.Index <> 1 Then
                     valCelda = columna.DataBodyRange(filaTable).Value
                     
-                    ' Inyección Segura: Convertimos celdas vacías a Null SQL
                     If Trim(CStr(valCelda)) = "" Then
                         rs.Fields(columna.Name).Value = Null
                     Else
@@ -748,25 +739,41 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
             rs.Update
             addedElement = addedElement + 1
             
-            ' Captura del ID generado por Access
             Dim nuevoID As Long
             nuevoID = rs.Fields(ColumnaIdName).Value
             strNuevos = strNuevos & IIf(strNuevos = "", "", ", ") & nuevoID
         End If
         
-        ' Limpieza del filtro para la siguiente fila
         rs.Filter = 0
     Next
 
     ' =======================================================
-    ' 3. REPORTE Y TRAZABILIDAD (Audit Trail)
+    ' 3. REPORTE Y TRAZABILIDAD (Motor de Compresión)
     ' =======================================================
     Dim reporteFinal As String
+    Const UMBRAL_SEGURIDAD As Integer = 150 ' Límite de caracteres para evitar Error 3163
+    
     reporteFinal = ""
     
-    If strModificados <> "" Then reporteFinal = "IDs MODIFICADOS: [" & strModificados & "]"
-    If strNuevos <> "" Then
-        reporteFinal = reporteFinal & IIf(reporteFinal = "", "", " | ") & "IDs NUEVOS: [" & strNuevos & "]"
+    ' Evaluamos y comprimimos la cadena de Modificaciones
+    If cambios > 0 Then
+        If Len(strModificados) > UMBRAL_SEGURIDAD Then
+            strModificados = "MODIFICACIÓN MASIVA: Se actualizaron " & cambios & " registros en " & tabla
+        Else
+            strModificados = "IDs MODIFICADOS: [" & strModificados & "]"
+        End If
+        reporteFinal = strModificados
+    End If
+    
+    ' Evaluamos y comprimimos la cadena de Altas Nuevas
+    If addedElement > 0 Then
+        If Len(strNuevos) > UMBRAL_SEGURIDAD Then
+            strNuevos = "ALTA MASIVA: Se crearon " & addedElement & " registros nuevos en " & tabla
+        Else
+            strNuevos = "IDs NUEVOS: [" & strNuevos & "]"
+        End If
+        
+        reporteFinal = reporteFinal & IIf(reporteFinal = "", "", " | ") & strNuevos
     End If
     
     UpdateTable = IIf(reporteFinal = "", "SIN CAMBIOS", reporteFinal)
@@ -780,7 +787,6 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
                    "- Registros modificados: " & cambios & vbCrLf & _
                    "- Registros nuevos: " & addedElement, vbInformation, "StockTech Sync"
         End If
-        ' Refrescamos la tabla para mostrar los Autonuméricos generados
         Call DataBaseUtils.GetExcelTable(tabla, refresh:=True)
     End If
 
@@ -794,7 +800,6 @@ limpieza:
     Exit Function
 
 ErrorHandler:
-    ' Modificado para mostrar exactamente por qué falló si vuelve a ocurrir
     App.SystemError "Excepción crítica en UpdateTable [" & tabla & "] - Error de Ejecución: " & Err.Description
     UpdateTable = "ERROR"
     Resume limpieza

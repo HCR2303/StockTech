@@ -109,7 +109,7 @@ End Enum
 
 Public Enum CNameSOLPEDs
     spd_id = 0
-    SPD_SOLPED = 1
+    spd_solped = 1
     spd_cuenta = 2
     spd_codigo_equipo = 3
     SPD_REFACCION = 4
@@ -122,6 +122,8 @@ Public Enum CNameSOLPEDs
     spd_capturo = 11
     spd_id_solicitud = 12
     spd_uso = 13
+    spd_aprobacion = 14
+    spd_comentario = 15
 End Enum
 
 
@@ -194,7 +196,7 @@ Public Const FieldsUbicaciones As String = "Id|Id_Ubicación|Indicador|Categoría|
 ' TSOLPEDs: Tabla de registro de SOLPEDs creadas con descripción por códigos
 Public Const TSOLPEDs As String = "SOLPEDs"
 Public Const FieldsSOLPEDs As String = "Id|SOLPED|Cuenta|Codigo de Equipo|Refacción|Proveedor|Proveedor Único|" & _
-                                        "Orden de Compra|No_Factura|Unidades|Costo|Capturo|Id_Solicitud|Uso"
+                                        "Orden de Compra|No_Factura|Unidades|Costo|Capturo|Id_Solicitud|Uso|Aprobación por Gerente|Comentario Gerente"
 
 Public Const TUsuarios As String = "Usuarios"
 Public Const FieldsUsuarios As String = "Id|Nombre|Usuario|Correo|Nivel|Contraseña"

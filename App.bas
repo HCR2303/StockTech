@@ -180,6 +180,9 @@ Sub OnAction_Ribbon(control As IRibbonControl)
             
         Case "SOLPEDsbttn"
             Call AccionesRibbon.RegistrarSOLPED
+            
+        Case "AprobarSOLPED"
+            Call AccionesRibbon.AprobarSOLPED
         
         Case "ConsultDBBttn"
             Consulta.Show
@@ -265,11 +268,11 @@ Private Sub RegistrarFallo(ByVal detalle As String)
     tabla = TSystemTrack
     campos = Array("Fecha", "Usuario", "Lugar", "Error")
     
-    valores = Array(Now(), Environ("USERNAME"), "Excepción Global", detalle)
+    valores = Array(Now(), UCase(Environ("USERNAME")), "Excepción Global", detalle)
 
     If DataBaseUtils.AddRegister(tabla, campos, valores) = False Then
         lineaLog = "[" & Format(Now(), "yyyy-mm-dd hh:nn:ss") & "] " & _
-               "USER: " & Environ("USERNAME") & " | " & _
+               "USER: " & UCase(Environ("USERNAME")) & " | " & _
                "ERR: Posible error de CONEXIÓN"
     
         On Error Resume Next

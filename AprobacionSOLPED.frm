@@ -1,14 +1,14 @@
 VERSION 5.00
-Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} SeguimientoSOLPED 
-   Caption         =   "Registro de SOLPED"
-   ClientHeight    =   9828.001
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} AprobacionSOLPED 
+   Caption         =   "Aprobación de SOLPED's"
+   ClientHeight    =   7356
    ClientLeft      =   108
    ClientTop       =   456
-   ClientWidth     =   10992
-   OleObjectBlob   =   "SeguimientoSOLPED.frx":0000
+   ClientWidth     =   10824
+   OleObjectBlob   =   "AprobacionSOLPED.frx":0000
    StartUpPosition =   1  'Centrar en propietario
 End
-Attribute VB_Name = "SeguimientoSOLPED"
+Attribute VB_Name = "AprobacionSOLPED"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -19,34 +19,41 @@ Private ProveedorMatrix As Variant
 Private RefaccionMatrix As Variant
 Private SOLPEDMatrix As Variant
 
-Const MODULE_NAME As String = "SeguimientoSOLPED FORM"
+Const MODULE_NAME As String = "AprobacionSOLPED Frm"
 
 Function GetMatrix()
     Dim SOLPEDMatrix As Variant
     Dim sqlQuery As String
     
-    ' 1. Construimos el SQL dinámico
+    ' =======================================================
+    ' 1. ENSAMBLAJE DE CONSULTA (Blindaje contra Nulos y ADO)
+    ' =======================================================
     sqlQuery = "SELECT DISTINCT [" & CampoDB(TSOLPEDs, spd_solped) & "] " & _
                "FROM [" & TSOLPEDs & "] " & _
-               "WHERE [" & CampoDB(TSOLPEDs, spd_aprobacion) & "] = -1 AND " & _
-               CampoDB(TSOLPEDs, spd_costo) & " IS NULL"
+               "WHERE [" & CampoDB(TSOLPEDs, spd_aprobacion) & "] = 0 " & _
+               "AND ([" & CampoDB(TSOLPEDs, spd_comentario) & "] NOT LIKE 'CANCELADA%' " & _
+               "OR [" & CampoDB(TSOLPEDs, spd_comentario) & "] IS NULL)"
                
-    ' 2. Disparamos la extracción
+    ' =======================================================
+    ' 2. EXTRACCIÓN Y RENDERIZADO
+    ' =======================================================
+    ' Disparamos la extracción con el motor ADO seguro
     SOLPEDMatrix = GetFromSQL(sqlQuery)
     
     ' 3. Validación de vacío
     If IsEmpty(SOLPEDMatrix) Then
-        MsgBox "No hay SOLPED's aprobadas", vbInformation
-        r = MsgBox("¿Desea ver las SOLPED's pendientes por aprobar?", vbYesNo, "Sin Registros Pendientes")
+        MsgBox "No hay SOLPED's por aprobar", vbInformation
+        r = MsgBox("¿Desea ver la tabla de SOLPED's?", vbYesNo, "Sin Registros Pendientes")
         If r = vbYes Then
             Unload Me
             DataBaseUtils.GetExcelTable TSOLPEDs, refresh:=True
-            Call StringUtils.FiltrarTabla(TSOLPEDs, CampoDB(TSOLPEDs, spd_aprobacion), False)
             Dim camposNoVis As Variant
-            camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_costo, spd_no_factura, spd_orden_compra)
+            camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_aprobacion, spd_comentario)
             Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
-            
+        Else
+            Unload Me
         End If
+        
         Exit Function
     End If
     
@@ -54,19 +61,83 @@ Function GetMatrix()
     Me.SOLPED.Column = SOLPEDMatrix
 
 End Function
-
-Private Sub Cerrada_Click()
-    If Me.Cerrada.Value Then
-        Me.ObservacionLabel.Visible = False
-        Me.observaciones.Visible = False
+Private Sub Aprobacion_Click()
+    Dim spd As String
+    spd = CStr(Trim(Me.SOLPED.Text))
+    If spd = "" Then
+        MsgBox "Se debe seleccionar una SOLPED primero", vbExclamation
+        Exit Sub
     End If
+    If DataBaseUtils.LogDB("Aprobación", "SOLPED: " & spd, "Se aprueba la SOLPED " & spd) Then
+        If DataBaseUtils.SetRegister(TSOLPEDs, CampoDB(TSOLPEDs, spd_aprobacion), True, CampoDB(TSOLPEDs, spd_solped), spd) Then
+            Dim campos As Variant
+            Dim valores As Variant
+            campos = CamposTablaDB(TSOLPEDsTrack)
+            StringUtils.DropFromArray campos, 0
+            StringUtils.DropFromArray campos, UBound(campos)
+            valores = Array(UCase(Environ("USERNAME")), Date, "APROBADA", spd)
+            If DataBaseUtils.AddRegister(TSOLPEDsTrack, campos, valores) Then
+                MsgBox "SOLPED: " & spd & " aprobada exitosamente"
+                Unload Me
+                AprobacionSOLPED.Show
+            Else
+                Call DataBaseUtils.SetRegister(TSOLPEDs, CampoDB(TSOLPEDs, spd_aprobacion), False, CampoDB(TSOLPEDs, spd_solped), spd)
+                DataBaseUtils.RollBack (TAuditTrail)
+            End If
+        End If
+    Else
+        App.SystemError ("Error al registrar AuditTrail")
+    End If
+    
 End Sub
 
-Private Sub Proceso_Click()
-    If Proceso.Value Then
-        Me.ObservacionLabel.Visible = True
-        Me.observaciones.Visible = True
+Private Sub Cancelar_Click()
+    Dim spd As String
+    spd = CStr(Trim(Me.SOLPED.Text))
+    If spd = "" Then
+        MsgBox "Se debe seleccionar una SOLPED primero", vbExclamation
+        Exit Sub
     End If
+    Dim Comentario As String
+    With AuditTrail
+        .Caption = "CANCELACIÓN SOLPED"
+        .AccionLabel = "Cancelación de SOLPED: " & spd
+        .Resultado = ""
+        .Show
+        Comentario = .Resultado
+    End With
+    If Trim(Comentario) = "" Then
+        MsgBox "Acción cancelada", vbInformation
+        Exit Sub
+    Else
+        If DataBaseUtils.LogDB("Cancelación", "SOLPED: " & spd, "Se cancela la SOLPED: " & spd & ", Razón: " & Comentario) Then
+        If DataBaseUtils.SetRegister(TSOLPEDs, CampoDB(TSOLPEDs, spd_comentario), "CANCELADA por Gerencia, Razon: " & Comentario, CampoDB(TSOLPEDs, spd_solped), spd) Then
+            Dim campos As Variant
+            Dim valores As Variant
+            campos = CamposTablaDB(TSOLPEDsTrack)
+            StringUtils.DropFromArray campos, 0
+            StringUtils.DropFromArray campos, UBound(campos)
+            valores = Array(UCase(Environ("USERNAME")), Date, "CANCELADA", spd)
+            If DataBaseUtils.AddRegister(TSOLPEDsTrack, campos, valores) Then
+                MsgBox "SOLPED: " & spd & " cancelada exitosamente"
+                Unload Me
+                AprobacionSOLPED.Show
+            Else
+                Call DataBaseUtils.SetRegister(TSOLPEDs, CampoDB(TSOLPEDs, spd_comentario), "", CampoDB(TSOLPEDs, spd_solped), spd)
+                DataBaseUtils.RollBack (TAuditTrail)
+            End If
+        Else
+            DataBaseUtils.RollBack (TAuditTrail)
+        End If
+    Else
+        App.SystemError ("Error al registrar AuditTrail")
+    End If
+    End If
+    
+End Sub
+
+Private Sub RefaccionesCods_Click()
+    Call RefaccionesCods_Change
 End Sub
 Private Sub RefaccionesCods_Change()
     Dim arrSeleccionadas As Variant
@@ -78,13 +149,10 @@ Private Sub RefaccionesCods_Change()
     
     camposRef = TablasDB.CamposTablaDB(TRefacciones)
     
-    ' =======================================================
-    ' 1. ESCANEO DE INTERFAZ
-    ' =======================================================
-    ' Consultamos cuántas filas están marcadas actualmente
+    ' 1. Consultamos cuántas filas están marcadas actualmente
     arrSeleccionadas = RefaccionesSeleccionadas()
     
-    ' Salida rápida si la matriz está vacía (evita errores en cadena)
+    ' 2. Salida rápida si la matriz está vacía (evita errores en cadena)
     If IsEmpty(arrSeleccionadas) Then
         ' Limpieza visual si el usuario desmarca todo
         Me.Ramarrillo.Visible = False
@@ -94,73 +162,58 @@ Private Sub RefaccionesCods_Change()
         Me.RefaccionName.Visible = False
         Me.Stock.Visible = False
         Me.Rubicacion.Visible = False
+        
+        
+        
         Exit Sub
     End If
     
     totalSeleccionadas = UBound(arrSeleccionadas) + 1
     
-    ' =======================================================
-    ' 2. EVALUACIÓN DE SELECCIÓN ÚNICA
-    ' =======================================================
+    ' 3. Evaluación del estado de la interfaz
     If totalSeleccionadas = 1 Then
     
-        ' Extraemos del arreglo, no de la propiedad .Value
+        ' CORRECCIÓN 1: Extraemos del arreglo, no de la propiedad .Value
         busqueda = arrSeleccionadas(0)
         
-        ' Ejecutamos la consulta con el parámetro SQL protegido
+        ' CORRECCIÓN 5: Añadidas las comillas simples para el parámetro SQL
         datosRefaccion = DataBaseUtils.TableDataBase(TRefacciones, "*", False, camposRef(ref_material) & " = '" & busqueda & "'")
         
-        ' --- CONDICIONAL PRINCIPAL ---
         If Not IsEmpty(datosRefaccion) Then
-            
-            ' A. EXITO EN BÚSQUEDA: Restauramos la visibilidad de los controles
+            ' CORRECCIÓN 4: Restauramos la visibilidad de los controles
             Me.RefaccionName.Visible = True
             Me.Stock.Visible = True
             Me.Rubicacion.Visible = True
             
-            ' Inyección segura de datos concatenando ("") para evitar Error 13 por Nulls
-            Me.RefaccionName.Caption = datosRefaccion(CNameRefacciones.ref_descripcion, 0) & ""
-            Me.Stock.Caption = datosRefaccion(CNameRefacciones.ref_stock, 0) & ""
-            Me.Rubicacion.Caption = datosRefaccion(CNameRefacciones.ref_ubicacion_almacen, 0) & ""
+            ' CORRECCIÓN 2: Uso correcto del Enum con índice bidimensional (Columna, Fila 0)
+            On Error Resume Next
+            Me.RefaccionName.Caption = datosRefaccion(CNameRefacciones.ref_descripcion, 0)
+            Me.Stock.Caption = datosRefaccion(CNameRefacciones.ref_stock, 0)
+            Me.Rubicacion.Caption = datosRefaccion(CNameRefacciones.ref_ubicacion_almacen, 0)
             
-            Criticidad = LCase(Trim(datosRefaccion(CNameRefacciones.ref_criticidad, 0) & ""))
             
-            ' Motor de semáforo visual
+            Criticidad = LCase(datosRefaccion(CNameRefacciones.ref_criticidad, 0) & "")
+            On Error GoTo 0
+            ' 1. Limpieza de estado visual (Apagamos todo por defecto)
             Me.Rrojo.Visible = False
             Me.Ramarrillo.Visible = False
             Me.Rverde.Visible = False
             Me.Nulo.Visible = False
             
+            ' 2. Evaluación estricta
             Select Case Criticidad
                 Case "alto"
                     Me.Rrojo.Visible = True
                 Case "medio"
                     Me.Ramarrillo.Visible = True
-                Case "bajo"
+                Case "bajo" ' Asegúrate de usar la palabra exacta de tu DB para el verde
                     Me.Rverde.Visible = True
                 Case Else
                     Me.Nulo.Visible = True
             End Select
-        
-        Else
-            ' =======================================================
-            ' 3. BLINDAJE CONTRA INFORMACIÓN FANTASMA (CORRECCIÓN CRÍTICA)
-            ' =======================================================
-            ' B. FALLO EN BÚSQUEDA: El código no existe en la base de datos.
-            ' Ocultamos los elementos para que el usuario no vea la refacción del clic anterior.
-            Me.Ramarrillo.Visible = False
-            Me.Rrojo.Visible = False
-            Me.Rverde.Visible = False
-            Me.Nulo.Visible = False
-            Me.RefaccionName.Visible = False
-            Me.Stock.Visible = False
-            Me.Rubicacion.Visible = False
         End If
         
     Else
-        ' =======================================================
-        ' 4. EVALUACIÓN DE SELECCIÓN MÚLTIPLE
-        ' =======================================================
         ' Múltiples seleccionadas: Ocultamos los datos específicos
         Me.Ramarrillo.Visible = False
         Me.Rrojo.Visible = False
@@ -170,155 +223,12 @@ Private Sub RefaccionesCods_Change()
         Me.Stock.Visible = False
         Me.Rubicacion.Visible = False
         
-        If Me.Cerrada.Value Then
-            Me.ObservacionLabel.Visible = False
-            Me.observaciones.Visible = False
-        End If
+        
         
     End If
 
 End Sub
-
-Private Sub RefaccionesCods_Click()
-    Call RefaccionesCods_Change
-End Sub
-Private Sub RegistroSeguimiento_Click()
-    Dim ctr As control
-    If Me.Proceso.Value = False And Me.Cerrada.Value = False Then
-        MsgBox "Debe seleccionar y llenar los campos de Estado de SOLPED", vbExclamation, "Estado de SOLPED's"
-        Exit Sub
-    End If
-    
-    Dim Refacciones As Variant
-        
-    If Me.SOLPED.Text = Empty Then
-        MsgBox "Debe seleccionar una SOLPED", vbExclamation
-        Exit Sub
-    End If
-        
-    
-    
-    Dim arrResultados() As String
-    Dim i As Long
-    
-    ' Para TODAS las refacciones
-    If Me.AllR.Value = True Then
-        
-        ' 1. Verificamos que haya datos en la lista para evitar Error 9
-        If Me.RefaccionesCods.ListCount = 0 Then
-            Refacciones = Empty
-            Exit Sub
-        End If
-        
-        ' 2. Dimensionamos la memoria para todos los elementos
-        ReDim Refacciones(0 To Me.RefaccionesCods.ListCount - 1)
-        
-        ' 3. Extraemos la columna 0 de toda la lista directamente
-        For i = 0 To Me.RefaccionesCods.ListCount - 1
-            Refacciones(i) = Me.RefaccionesCods.List(i, 0)
-        Next i
-        
-    Else
-        ' Seleccion Multiple o Única
-        If Me.RefaccionesCods.ListCount = 1 Then
-            Refacciones = Array(Me.RefaccionesCods.List(0, 0))
-        Else
-            Refacciones = RefaccionesSeleccionadas()
-        End If
-    End If
-    
-    If IsEmpty(Refacciones) And Me.AllR.Value = False Then
-        MsgBox "Debe seleccionar la(s) refaccione(s)", vbExclamation
-        Exit Sub
-    End If
-    If Me.Proceso.Value Then
-        Call SOLPEDProceso(Refacciones)
-        Unload Me
-        Exit Sub
-    End If
-    If Me.Cerrada.Value Then
-        Call SOLPEDCierre(Refacciones)
-        Unload Me
-        Exit Sub
-    End If
-    Unload Me
-End Sub
-Private Sub SOLPEDProceso(Refacciones As Variant)
-    ' Registro en seguimiento (solo un registro)
-    Dim campos As Variant
-    Dim valores As Variant
-    Dim tabla As String
-    
-    If Trim(Me.observaciones.Text) = "" Then
-        MsgBox "El campo de OBSERVACIONES es OBLIGATORIO", vbExclamation
-        Exit Sub
-    End If
-    
-    tabla = TSOLPEDsTrack
-    
-    campos = Array(CampoDB(tabla, spt_usuario), CampoDB(tabla, spt_fecha), CampoDB(tabla, spt_estado), CampoDB(tabla, spt_solped), CampoDB(tabla, spt_comentario))
-    valores = Array(GetCurrentUser, Now(), "PROCESO", Me.SOLPED.Text, Me.observaciones.Text)
-    
-    If DataBaseUtils.LogDB("SOLPED en Proceso", "SOLPED: " & Me.SOLPED.Text, "Se registra estado de PROCESO de SOLPED: " & Me.SOLPED.Text) Then
-        If DataBaseUtils.AddRegister(tabla, campos, valores) Then
-            MsgBox "Registro de SOLPED en PROCESO exitoso", vbInformation, "SOLPED en Proceso"
-            Unload Me
-        Else
-            MsgBox "Error en registro de SOLPED. Contacte a Administrador", vbCritical
-        End If
-    End If
-    
-    
-End Sub
-Private Sub SOLPEDCierre(ByRef Refacciones As Variant)
-    
-    
-    Dim spd As String
-    Dim ref As String
-    Dim i As Long
-    spd = Me.SOLPED.Text
-    Unload Me
-    For i = LBound(Refacciones) To UBound(Refacciones)
-        ref = Refacciones(i)
-        If Not StringUtils.CerrarRefaccion(ref, spd) Then
-            MsgBox "Ha ocurrido un error de registro. Intente nuevamente", vbCritical, "Error de ESTADO de SOLPED"
-            r = MsgBox("¿Desea volver a intentar?", vbYesNo, "Intentar de Nuevo")
-            If r = vbYes Then
-                i = i - 1
-            Else
-                SeguimientoSOLPED.Show
-                Exit Sub
-            End If
-        End If
-    Next
-    GetMatrix
-    
-    Resultado = Application.Match(spd, Me.SOLPED.List, 0)
-        
-    If IsError(Resultado) Then
-        tabla = TSOLPEDsTrack
-    
-        campos = Array(CampoDB(tabla, spt_usuario), CampoDB(tabla, spt_fecha), CampoDB(tabla, spt_estado), CampoDB(tabla, spt_solped), CampoDB(tabla, spt_comentario))
-        valores = Array(GetCurrentUser, Now(), "CERRADA", Me.SOLPED.Text, Me.observaciones.Text)
-        
-        If DataBaseUtils.LogDB("Cierre de SOLPED", "SOLPED: " & spd, "Se registra estado de CERRADA de SOLPED: " & spd) Then
-            If DataBaseUtils.AddRegister(tabla, campos, valores) Then
-                MsgBox "La SOLPED: " & spd & " ya no tiene refacciones por registrar y se declarará CERRADA ", vbInformation, "SOLPED en Proceso"
-                Unload Me
-            Else
-                MsgBox "Error en registro de SOLPED CERRADA. Contacte a Administrador", vbCritical
-            End If
-        End If
-    End If
-        
-End Sub
-
 Private Sub SOLPED_Change()
-    Me.Proceso.Value = False
-    Me.Cerrada.Value = False
-    
-    Me.ObservacionLabel.Visible = False
-    Me.observaciones.Visible = False
     
     fila = SOLPED.ListIndex
     
@@ -327,11 +237,9 @@ Private Sub SOLPED_Change()
     End If
 End Sub
 
-Private Sub SOLPED_Click()
-    Call SOLPED_Change
-End Sub
-
 Private Sub UserForm_Activate()
+    Me.Aprobacion.BackColor = RGB(204, 255, 204)
+    Me.Cancelar.BackColor = RGB(255, 200, 200)
     GetMatrix
 End Sub
 Public Sub CargarDatosSOLPED(ByVal idSolpedSeleccionada As String)
@@ -340,10 +248,8 @@ Public Sub CargarDatosSOLPED(ByVal idSolpedSeleccionada As String)
     Dim arrCta As Variant
     Dim arrProv As Variant
     
-    ' 1. Traemos SOLO la fila de esa SOLPED (Carga Selectiva)
-    
-    arrSpd = DataBaseUtils.TableDataBase(TablasDB.TSOLPEDs, "*", False, CampoDB(TSOLPEDs, spd_solped) & " = '" & idSolpedSeleccionada & "' AND " & _
-                                        CampoDB(TSOLPEDs, spd_costo) & " IS NULL")
+    ' Inyección directa en tu motor de extracción de tablas
+    arrSpd = DataBaseUtils.TableDataBase(TSOLPEDs, "*", False, "[" & CampoDB(TSOLPEDs, spd_solped) & " = " & idSolpedSeleccionada)
     
     If IsEmpty(arrSpd) Then Exit Sub
     
@@ -375,7 +281,6 @@ Public Sub CargarDatosSOLPED(ByVal idSolpedSeleccionada As String)
     ' Relleno para frame de EQUIPOS
     arrEqu = DataBaseUtils.TableDataBase(TEquipos, "*", False, CampoDB(TEquipos, equ_codigo) & " = '" & Me.CodigoEquipo.Caption & "'")
     If Not IsEmpty(arrEqu) Then
-        On Error Resume Next
         Me.MarcaEquipo.Caption = arrEqu(CNameEquipos.equ_marca, 0)
         Me.ModeloEquipo.Caption = arrEqu(CNameEquipos.equ_modelo, 0)
         Me.EquipName.Caption = arrEqu(CNameEquipos.equ_nombre, 0)
@@ -400,7 +305,6 @@ Public Sub CargarDatosSOLPED(ByVal idSolpedSeleccionada As String)
         Dim ubic As String
         ubic = DataBaseUtils.DatoDataBase(TUbicaciones, camposUbic(ubi_id_ubicacion), arrEqu(equ_id_ubicacion, 0), camposUbic(ubi_ubicacion))
         Me.Ubicacion.Caption = ubic
-        On Error GoTo 0
     End If
     
     ' Relleno para frame de PROVEEDORES
@@ -476,3 +380,5 @@ Public Function RefaccionesSeleccionadas() As Variant
     
     RefaccionesSeleccionadas = arrSeleccionados
 End Function
+
+

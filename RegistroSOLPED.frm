@@ -670,7 +670,7 @@ Private Function AddSOLPED(ByVal IdSolicitud As Long) As Boolean
     camposSOLPEDs = CamposTablaDB(TSOLPEDs)
     
     ' 1. Preparación de Arrays (Verifica el nombre de la columna SOLPED en Access)
-    campos = Array(camposSOLPEDs(SPD_SOLPED), camposSOLPEDs(spd_cuenta), camposSOLPEDs(spd_codigo_equipo), camposSOLPEDs(SPD_REFACCION), _
+    campos = Array(camposSOLPEDs(spd_solped), camposSOLPEDs(spd_cuenta), camposSOLPEDs(spd_codigo_equipo), camposSOLPEDs(SPD_REFACCION), _
                     camposSOLPEDs(spd_proveedor), camposSOLPEDs(spd_proveedor_unico), camposSOLPEDs(spd_capturo), camposSOLPEDs(spd_id_solicitud), camposSOLPEDs(spd_uso))
     valores = Array(Me.SOLPED.Text, Me.Numero.Text, Me.CodigoEquipo.Text, Me.RefaccionCodigo.Text, Me.ProveedorName.Caption, Me.Unico.Value, GetCurrentUser, IdSolicitud, Me.UsoSOLPED.Text)
     
@@ -681,7 +681,7 @@ Private Function AddSOLPED(ByVal IdSolicitud As Long) As Boolean
         Dim valoresTrack As Variant
         Dim camposTrack As Variant
         camposTrack = Array(camposSOLPEDTrack(spt_usuario), camposSOLPEDTrack(spt_fecha), camposSOLPEDTrack(spt_estado), camposSOLPEDTrack(spt_solped))
-        valoresTrack = Array(Environ("USERNAME"), StringUtils.EstablecerFecha(), "CREADA", Me.SOLPED.Text)
+        valoresTrack = Array(UCase(Environ("USERNAME")), StringUtils.EstablecerFecha(), "CREADA", Me.SOLPED.Text)
         
         Call DataBaseUtils.AddRegister(TSOLPEDsTrack, camposTrack, valoresTrack)
         If TipoSolicitud <> "Automática" Then

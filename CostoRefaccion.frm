@@ -93,7 +93,7 @@ Private Sub RegisCosto_Click()
     End If
     Dim camposWh As Variant
     Dim valoresWh As Variant
-    camposWh = Array(CampoDB(TSOLPEDs, SPD_SOLPED), CampoDB(TSOLPEDs, SPD_REFACCION))
+    camposWh = Array(CampoDB(TSOLPEDs, spd_solped), CampoDB(TSOLPEDs, SPD_REFACCION))
     valoresWh = Array(spd, ref)
     
     

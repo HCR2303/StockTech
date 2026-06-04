@@ -414,3 +414,15 @@ Public Sub VerUserDetails(ByVal user As String)
     Call Seguridad.UnmarkStockTechSheet(ws)
     Call App.EnfocarStockTechLabels
 End Sub
+Sub AprobarSOLPED()
+    r = MsgBox("¿Desea ver la tabla de SOLPED's pendientes por aprobación?", vbYesNo, "StockTech Aprobación")
+    If r = vbYes Then
+        DataBaseUtils.GetExcelTable TSOLPEDs, refresh:=True
+        Call StringUtils.FiltrarTabla(TSOLPEDs, CampoDB(TSOLPEDs, spd_aprobacion), False)
+        Dim camposNoVis As Variant
+        camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_costo, spd_no_factura, spd_orden_compra)
+        Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
+        Exit Sub
+    End If
+    AprobacionSOLPED.Show
+End Sub

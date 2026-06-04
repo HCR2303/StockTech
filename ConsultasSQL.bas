@@ -63,7 +63,7 @@ Public Function GetTablaDetalleUsuario(ByVal nombreUsuario As String) As Variant
         arrSol(CNameSolicitudes.sol_id_solicitud), _
         arrSol(CNameSolicitudes.sol_fecha), _
         arrSol(CNameSolicitudes.sol_codigo), _
-        arrSpd(CNameSOLPEDs.SPD_SOLPED), _
+        arrSpd(CNameSOLPEDs.spd_solped), _
         arrSpd(CNameSOLPEDs.SPD_REFACCION), _
         arrSpd(CNameSOLPEDs.spd_costo), _
         arrSpd(CNameSOLPEDs.spd_cuenta), _
