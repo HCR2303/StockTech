@@ -113,6 +113,9 @@ Private Sub SolicitarRefaccion_Click()
     If DataBaseUtils.LogDB("Solicitud", "Refacción: " & RefaccionCodigo.Value, "Se crea solicitud de refacción: " & RefaccionCodigo.Value) Then
         If DataBaseUtils.AddRegister(TSolicitudes, campos, valores) Then
             MsgBox "Registro exitoso", vbInformation, "Registro de Refacción"
+            Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)
+            Call StringUtils.FiltrarTabla(TSolicitudes, CampoDB(TSolicitudes, sol_realizada), False)
+            Call Seguridad.LockSheet(ActiveSheet)
             Unload Me
         End If
     End If

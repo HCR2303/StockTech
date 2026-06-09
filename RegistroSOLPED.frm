@@ -304,6 +304,7 @@ Private Sub RegisSOLPED_Click()
         
         ' Cerramos el formulario solo si hubo éxito
         Unload Me
+        Call Seguridad.LockSheet(ActiveSheet)
         App.EnfocarStockTechLabels
     Else
         ' Si AddSOLPED devuelve False sin error crítico de sistema
@@ -525,6 +526,7 @@ Private Sub NuevoEquipo_Click()
 End Sub
 Private Sub Presupuestos_Click()
     DataBaseUtils.GetExcelTable (TPresupuestos)
+    Call Seguridad.LockSheet(ActiveSheet)
     Unload Me
     MsgBox "Ahora puede editar la tabla y actualizar la Base de Datos", vbInformation
 End Sub
@@ -572,6 +574,7 @@ Private Function getIdSolicitud() As Boolean
                 Else
                     Call DataBaseUtils.GetExcelTable(TSolicitudes)
                 End If
+                Call Seguridad.LockSheet(ActiveSheet)
             End If
 again:
             idInput = Application.InputBox( _
@@ -678,16 +681,19 @@ Private Function AddSOLPED(ByVal IdSolicitud As Long) As Boolean
     If DataBaseUtils.AddRegister(TablasDB.TSOLPEDs, campos, valores) Then
         Dim camposSOLPEDTrack As Variant
         camposSOLPEDTrack = CamposTablaDB(TSOLPEDsTrack)
-        Dim valoresTrack As Variant
+        Dim valoresTrack1 As Variant
+        Dim valoresTrack2 As Variant
         Dim camposTrack As Variant
         camposTrack = Array(camposSOLPEDTrack(spt_usuario), camposSOLPEDTrack(spt_fecha), camposSOLPEDTrack(spt_estado), camposSOLPEDTrack(spt_solped))
-        valoresTrack = Array(UCase(Environ("USERNAME")), StringUtils.EstablecerFecha(), "CREADA", Me.SOLPED.Text)
-        
-        Call DataBaseUtils.AddRegister(TSOLPEDsTrack, camposTrack, valoresTrack)
+        valoresTrack1 = Array(UCase(Environ("USERNAME")), StringUtils.EstablecerFecha(), "CREADA", Me.SOLPED.Text)
+        valoresTrack2 = Array(UCase(Environ("USERNAME")), Date, "POR APROBAR", Me.SOLPED.Text)
+        Call DataBaseUtils.AddRegister(TSOLPEDsTrack, camposTrack, valoresTrack1)
+        Call DataBaseUtils.AddRegister(TSOLPEDsTrack, camposTrack, valoresTrack2)
         If TipoSolicitud <> "Automática" Then
         
             If DataBaseUtils.SetDataByID(TablasDB.TSolicitudes, CamposTablaDB(TSolicitudes)(sol_realizada), True, IdSolicitud) = False Then
                 DataBaseUtils.RollBack (TSOLPEDs)
+                
                 Exit Function
             End If
             If StringUtils.ExisteHoja(TSolicitudes) Then
@@ -695,6 +701,7 @@ Private Function AddSOLPED(ByVal IdSolicitud As Long) As Boolean
                 Set sh = ActiveWorkbook.Worksheets(TSolicitudes)
                 If Seguridad.GetStockTechSheetName(sh) = TSolicitudes Then
                     Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)
+                    Call Seguridad.LockSheet(ActiveSheet)
                 End If
             End If
         End If

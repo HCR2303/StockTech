@@ -24,13 +24,16 @@ Const MODULE_NAME As String = "AprobacionSOLPED Frm"
 Function GetMatrix()
     Dim SOLPEDMatrix As Variant
     Dim sqlQuery As String
+    Dim r As VbMsgBoxResult
     
     ' =======================================================
-    ' 1. ENSAMBLAJE DE CONSULTA (Blindaje contra Nulos y ADO)
+    ' 1. ENSAMBLAJE DE CONSULTA (Blindaje Total contra Nulos)
     ' =======================================================
+    ' Se añade el escudo "(... OR ... IS NULL)" al campo de aprobación
+    ' para garantizar que las SOLPEDs recién nacidas no sean cortadas de la lista.
     sqlQuery = "SELECT DISTINCT [" & CampoDB(TSOLPEDs, spd_solped) & "] " & _
                "FROM [" & TSOLPEDs & "] " & _
-               "WHERE [" & CampoDB(TSOLPEDs, spd_aprobacion) & "] = 0 " & _
+               "WHERE ([" & CampoDB(TSOLPEDs, spd_aprobacion) & "] = 0 OR [" & CampoDB(TSOLPEDs, spd_aprobacion) & "] IS NULL) " & _
                "AND ([" & CampoDB(TSOLPEDs, spd_comentario) & "] NOT LIKE 'CANCELADA%' " & _
                "OR [" & CampoDB(TSOLPEDs, spd_comentario) & "] IS NULL)"
                
@@ -40,22 +43,35 @@ Function GetMatrix()
     ' Disparamos la extracción con el motor ADO seguro
     SOLPEDMatrix = GetFromSQL(sqlQuery)
     
-    ' 3. Validación de vacío
+    ' =======================================================
+    ' 3. VALIDACIÓN DE VACÍO (Control de Flujo)
+    ' =======================================================
     If IsEmpty(SOLPEDMatrix) Then
-        MsgBox "No hay SOLPED's por aprobar", vbInformation
-        r = MsgBox("¿Desea ver la tabla de SOLPED's?", vbYesNo, "Sin Registros Pendientes")
+        MsgBox "No hay SOLPED's por aprobar", vbInformation, "Estado de Operación"
+        r = MsgBox("¿Desea ver la tabla de SOLPED's?", vbYesNo + vbQuestion, "Sin Registros Pendientes")
+        
         If r = vbYes Then
             Unload Me
             DataBaseUtils.GetExcelTable TSOLPEDs, refresh:=True
+            
             Dim camposNoVis As Variant
             camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_aprobacion, spd_comentario)
             Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
+            Call Seguridad.LockSheet(ActiveSheet)
         Else
             Unload Me
         End If
         
         Exit Function
     End If
+    
+    ' =======================================================
+    ' 4. INYECCIÓN A LA INTERFAZ (Prevención de Corte Visual)
+    ' =======================================================
+    ' Apagamos estrictamente la propiedad ColumnHeads por código.
+    ' Esto asegura que VBA no consuma el primer registro de la matriz
+    ' utilizándolo como un título invisible.
+    Me.SOLPED.ColumnHeads = False
     
     ' La propiedad .Column recibe nativamente la matriz (Cols, Filas) de ADO
     Me.SOLPED.Column = SOLPEDMatrix
@@ -249,7 +265,7 @@ Public Sub CargarDatosSOLPED(ByVal idSolpedSeleccionada As String)
     Dim arrProv As Variant
     
     ' Inyección directa en tu motor de extracción de tablas
-    arrSpd = DataBaseUtils.TableDataBase(TSOLPEDs, "*", False, "[" & CampoDB(TSOLPEDs, spd_solped) & " = " & idSolpedSeleccionada)
+    arrSpd = DataBaseUtils.TableDataBase(TSOLPEDs, "*", False, "[" & CampoDB(TSOLPEDs, spd_solped) & "] = '" & idSolpedSeleccionada & "'")
     
     If IsEmpty(arrSpd) Then Exit Sub
     
@@ -380,5 +396,3 @@ Public Function RefaccionesSeleccionadas() As Variant
     
     RefaccionesSeleccionadas = arrSeleccionados
 End Function
-
-

@@ -93,25 +93,31 @@ Private Sub NuevaRefaccion_Click()
                 RegistroRefaccion = True
                 Unload Me
                 MsgBox "Registro exitoso", vbInformation, "Registro de nueva Refacción"
+                Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)
+                Call StringUtils.FiltrarTabla(TSolicitudes, CampoDB(tabla, sol_realizada), False)
+                Call Seguridad.LockSheet(ActiveSheet)
+            
             End If
         End If
         Exit Sub
     End If
     
-    arrRef = CamposTablaDB(TRefacciones)
-    campos = Array(arrRef(ref_material), arrRef(ref_descripcion), arrRef(ref_presentacion), arrRef(ref_ubicacion_almacen), arrRef(ref_criticidad))
+    
+    campos = Array(CampoDB(TRefacciones, ref_material), CampoDB(TRefacciones, ref_descripcion), CampoDB(TRefacciones, ref_presentacion), CampoDB(TRefacciones, ref_ubicacion_almacen), CampoDB(TRefacciones, ref_criticidad))
     valores = Array(Me.Codigo.Text, Me.Refaccion.Text, Me.Presentación.Text, Me.Ubicacion.Text, Me.Criticidad.Text)
     
     If DataBaseUtils.LogDB("Creación", "Refacción Nueva: " & UCase(Codigo.Text), "Se crea Refacción nueva, Codigo: " & Codigo.Text, True) Then
         If DataBaseUtils.AddRegister(TRefacciones, campos, valores) Then
             RegistroRefaccion = True
-            MsgBox "Refacción creada con éxito.", vbInformation, "Administración de Base de Datos"
-            verificar = MsgBox("¿Desea verificar la información?", vbYesNo)
-            
-            If verificar = 6 Then
-                MsgBox "Se mostrará la tabla de datos de Refacciones a continuación... ", vbInformation
-                Call DataBaseUtils.GetExcelTable(TRefacciones, refresh:=True)
-                Call StringUtils.SeleccionColumnasTabla(TRefacciones, campos)
+            If ActiveSheet.Name <> TSolicitudes Then
+                MsgBox "Refacción creada con éxito.", vbInformation, "Administración de Base de Datos"
+                verificar = MsgBox("¿Desea verificar la información?", vbYesNo)
+                
+                If verificar = vbYes Then
+                    Call DataBaseUtils.GetExcelTable(TRefacciones, refresh:=True)
+                    Call StringUtils.SeleccionColumnasTabla(TRefacciones, campos)
+                    Call Seguridad.LockSheet(ActiveSheet)
+                End If
             End If
         Else
             DataBaseUtils.RollBack (TAuditTrail)

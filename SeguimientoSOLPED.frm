@@ -45,7 +45,7 @@ Function GetMatrix()
             Dim camposNoVis As Variant
             camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_costo, spd_no_factura, spd_orden_compra)
             Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
-            
+            Call Seguridad.LockSheet(ActiveSheet)
         End If
         Exit Function
     End If
@@ -272,18 +272,38 @@ Private Sub SOLPEDProceso(Refacciones As Variant)
 End Sub
 Private Sub SOLPEDCierre(ByRef Refacciones As Variant)
     
-    
     Dim spd As String
     Dim ref As String
     Dim i As Long
+    Dim r As VbMsgBoxResult
+    
+    ' Variables para preservar el estado visual
+    Dim obsText As String
+    Dim solpedCompletamenteCerrada As Boolean
+    
+    ' =======================================================
+    ' PASO 1: CAPTURA DE MEMORIA VIVA
+    ' =======================================================
+    ' Extraemos la información crítica de la interfaz ANTES de hacer cualquier
+    ' alteración. Eliminamos el "Unload Me" superior para no destruir la memoria.
     spd = Me.SOLPED.Text
-    Unload Me
+    obsText = Me.observaciones.Text
+    
+    ' Asumimos por defecto que se va a cerrar, a menos que la encontremos viva más adelante
+    solpedCompletamenteCerrada = True
+
+    ' =======================================================
+    ' PASO 2: MOTOR DE CIERRE TRANSACCIONAL
+    ' =======================================================
     For i = LBound(Refacciones) To UBound(Refacciones)
         ref = Refacciones(i)
+        
         If Not StringUtils.CerrarRefaccion(ref, spd) Then
-            MsgBox "Ha ocurrido un error de registro. Intente nuevamente", vbCritical, "Error de ESTADO de SOLPED"
-            r = MsgBox("¿Desea volver a intentar?", vbYesNo, "Intentar de Nuevo")
+            MsgBox "Ha ocurrido un error de registro o lo ha cancelado. Intente nuevamente", vbExclamation, "Error de ESTADO de SOLPED"
+            r = MsgBox("¿Desea volver a intentar?", vbYesNo + vbQuestion, "Intentar de Nuevo")
+            
             If r = vbYes Then
+                ' Retrocedemos el iterador para reintentar la misma refacción
                 i = i - 1
             Else
                 SeguimientoSOLPED.Show
@@ -291,27 +311,103 @@ Private Sub SOLPEDCierre(ByRef Refacciones As Variant)
             End If
         End If
     Next
-    GetMatrix
     
-    Resultado = Application.Match(spd, Me.SOLPED.List, 0)
+    ' =======================================================
+    ' PASO 3: RECARGA DE MATRIZ DE PENDIENTES
+    ' =======================================================
+    ' Disparamos tu función para que vuelva a consultar SQL.
+    ' Las SOLPEDs que ya no tengan refacciones pendientes desaparecerán de Me.SOLPED.List.
+    Call GetMatrix
+    
+    ' =======================================================
+    ' PASO 4: EVALUACIÓN DE SUPERVIVENCIA (Sustituto Quirúrgico de Match)
+    ' =======================================================
+    ' En lugar de Application.Match, iteramos la lista reconstruida.
+    ' Es matemáticamente exacto y no sufre colisiones de dimensiones (2D vs 1D).
+    If Me.SOLPED.ListCount > 0 Then
+        For i = 0 To Me.SOLPED.ListCount - 1
+            If CStr(Me.SOLPED.List(i, 0)) = spd Then
+                ' Si la SOLPED sigue en la lista, significa que le quedan más refacciones.
+                ' Cancelamos la bandera de cierre total y abortamos el escaneo.
+                solpedCompletamenteCerrada = False
+                Exit For
+            End If
+        Next i
+    End If
+    
+    ' =======================================================
+    ' PASO 5: PROTOCOLO DE CIERRE TOTAL
+    ' =======================================================
+    If solpedCompletamenteCerrada Then
+        Dim tabla As String
+        Dim campos As Variant
+        Dim valores As Variant
         
-    If IsError(Resultado) Then
         tabla = TSOLPEDsTrack
-    
+        
         campos = Array(CampoDB(tabla, spt_usuario), CampoDB(tabla, spt_fecha), CampoDB(tabla, spt_estado), CampoDB(tabla, spt_solped), CampoDB(tabla, spt_comentario))
-        valores = Array(GetCurrentUser, Now(), "CERRADA", Me.SOLPED.Text, Me.observaciones.Text)
+        ' Usamos la variable obsText que rescatamos en el Paso 1
+        valores = Array(GetCurrentUser(), Now(), "CERRADA", spd, obsText)
         
         If DataBaseUtils.LogDB("Cierre de SOLPED", "SOLPED: " & spd, "Se registra estado de CERRADA de SOLPED: " & spd) Then
             If DataBaseUtils.AddRegister(tabla, campos, valores) Then
-                MsgBox "La SOLPED: " & spd & " ya no tiene refacciones por registrar y se declarará CERRADA ", vbInformation, "SOLPED en Proceso"
-                Unload Me
+                MsgBox "La SOLPED: " & spd & " ya no tiene refacciones por registrar y se declarará CERRADA.", vbInformation, "SOLPED Completada"
             Else
-                MsgBox "Error en registro de SOLPED CERRADA. Contacte a Administrador", vbCritical
+                MsgBox "Error en registro de SOLPED CERRADA. Contacte al Administrador", vbCritical, "Error de Sistema"
             End If
         End If
     End If
-        
+    
+    ' =======================================================
+    ' PASO 6: DESTRUCCIÓN SEGURA
+    ' =======================================================
+    ' Una vez concluida toda la lógica y habiendo extraído la información necesaria,
+    ' podemos destruir el formulario limpiamente.
+    Unload Me
+
 End Sub
+'Private Sub SOLPEDCierre(ByRef Refacciones As Variant)
+'
+'
+'    Dim spd As String
+'    Dim ref As String
+'    Dim i As Long
+'    spd = Me.SOLPED.Text
+'    Unload Me
+'    For i = LBound(Refacciones) To UBound(Refacciones)
+'        ref = Refacciones(i)
+'        If Not StringUtils.CerrarRefaccion(ref, spd) Then
+'            MsgBox "Ha ocurrido un error de registro. Intente nuevamente", vbCritical, "Error de ESTADO de SOLPED"
+'            r = MsgBox("¿Desea volver a intentar?", vbYesNo, "Intentar de Nuevo")
+'            If r = vbYes Then
+'                i = i - 1
+'            Else
+'                SeguimientoSOLPED.Show
+'                Exit Sub
+'            End If
+'        End If
+'    Next
+'    GetMatrix
+'
+'    Resultado = Application.Match(spd, Me.SOLPED.List, 0)
+'
+'    If IsError(Resultado) Then
+'        tabla = TSOLPEDsTrack
+'
+'        campos = Array(CampoDB(tabla, spt_usuario), CampoDB(tabla, spt_fecha), CampoDB(tabla, spt_estado), CampoDB(tabla, spt_solped), CampoDB(tabla, spt_comentario))
+'        valores = Array(GetCurrentUser, Now(), "CERRADA", Me.SOLPED.Text, Me.observaciones.Text)
+'
+'        If DataBaseUtils.LogDB("Cierre de SOLPED", "SOLPED: " & spd, "Se registra estado de CERRADA de SOLPED: " & spd) Then
+'            If DataBaseUtils.AddRegister(tabla, campos, valores) Then
+'                MsgBox "La SOLPED: " & spd & " ya no tiene refacciones por registrar y se declarará CERRADA ", vbInformation, "SOLPED en Proceso"
+'                Unload Me
+'            Else
+'                MsgBox "Error en registro de SOLPED CERRADA. Contacte a Administrador", vbCritical
+'            End If
+'        End If
+'    End If
+'
+'End Sub
 
 Private Sub SOLPED_Change()
     Me.Proceso.Value = False

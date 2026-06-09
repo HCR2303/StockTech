@@ -255,7 +255,7 @@ Sub CalculosPresupuestos()
     ' Ocultamos las columnas que no necesita ver el usuario
     campos = Array(CampoDB(TPresupuestos, pre_id_cuenta), CampoDB(TPresupuestos, pre_presupuesto), columnaNva1)
     Call StringUtils.SeleccionColumnasTabla(tablaName, campos)
-    
+    Call Seguridad.LockSheet(ActiveSheet)
     Seguridad.UnmarkStockTechSheet ws
     'Seguridad.LockSheet (ActiveSheet)
     App.EnfocarStockTechLabels
@@ -303,6 +303,7 @@ Sub EliminarRegistro()
             If DataBaseUtils.DeleteRegisterByID(tabla, id) Then
                 MsgBox "Eliminación exitosa", vbInformation, "Eliminación en DB"
                 DataBaseUtils.GetExcelTable tabla, refresh:=True
+                Call Seguridad.LockSheet(ActiveSheet)
             Else
                 RollBack (TAuditTrail)
             End If
@@ -412,6 +413,7 @@ Public Sub VerUserDetails(ByVal user As String)
     ' 5. CIERRE, SEGURIDAD Y UX
     ' =======================================================
     Call Seguridad.UnmarkStockTechSheet(ws)
+    Call Seguridad.LockSheet(ActiveSheet)
     Call App.EnfocarStockTechLabels
 End Sub
 Sub AprobarSOLPED()
@@ -422,7 +424,14 @@ Sub AprobarSOLPED()
         Dim camposNoVis As Variant
         camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_costo, spd_no_factura, spd_orden_compra)
         Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
+        Call Seguridad.LockSheet(ActiveSheet)
         Exit Sub
     End If
     AprobacionSOLPED.Show
+    DataBaseUtils.GetExcelTable TSOLPEDs, refresh:=True
+    Call StringUtils.FiltrarTabla(TSOLPEDs, CampoDB(TSOLPEDs, spd_aprobacion), False)
+    
+    camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_costo, spd_no_factura, spd_orden_compra)
+    Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
+    Call Seguridad.LockSheet(ActiveSheet)
 End Sub

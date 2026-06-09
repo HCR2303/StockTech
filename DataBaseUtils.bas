@@ -788,6 +788,7 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
                    "- Registros nuevos: " & addedElement, vbInformation, "StockTech Sync"
         End If
         Call DataBaseUtils.GetExcelTable(tabla, refresh:=True)
+        Call Seguridad.LockSheet(ActiveSheet)
     End If
 
 limpieza:

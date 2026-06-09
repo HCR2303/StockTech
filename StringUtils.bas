@@ -336,7 +336,7 @@ Public Function CerrarRefaccion(ByVal Refaccion As String, ByVal SOLPED As Strin
     End With
     If exito Then
         'Registro de AuditTrail
-        If Not DataBaseUtils.LogDB("Cambio de estado a Cerrada", "Refacción: " & Refaccion, _
+        If Not DataBaseUtils.LogDB("Cambio de estado a CERRADA", "Refacción: " & Refaccion, _
                         "Refacción: " & Refaccion & " con referencia a la SOLPED: " & SOLPED & " CERRADA") Then
             MsgBox "Error de registro de trazabilidad. Registro comprometido", vbCritical, "Error en AuditTrail"
             Exit Function
