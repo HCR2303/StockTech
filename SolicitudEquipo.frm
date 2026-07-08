@@ -37,10 +37,10 @@ Function GetMatrix()
     
     Dim i As Long
     For i = 0 To Filas
-        EquiposList(i) = EquiposMatrix(1, i) & ""
+        EquiposList(i) = EquiposMatrix(2, i) & ""
     Next i
     
-    Me.CodigoEquipo.List = EquiposList
+    Me.EquipName.List = EquiposList
     
 End Function
 
@@ -49,8 +49,12 @@ Private Sub NuevoEquipo_Click()
     NewEquip.Show
 End Sub
 
+Private Sub EquipName_Click()
+    Call EquipName_Change
+End Sub
+
 Private Sub SCodigo_Click()
-    With Me.CodigoEquipo
+    With Me.EquipName
         
             If SCodigo.Value Then
                 .Value = Empty
@@ -74,17 +78,39 @@ Private Sub SolicitarEquipo_Click()
     '===================================
     '   Ruta para equipos con Código
     '===================================
+    tabla = TSolicitudes
+    campos = Array(CampoDB(TSolicitudes, sol_fecha), CampoDB(TSolicitudes, sol_usuario), CampoDB(TSolicitudes, sol_codigo), CampoDB(TSolicitudes, sol_tipo))
+    If Me.Caption = "Servicio a Equipo" Then
+        campos = Array(CampoDB(TSolicitudes, sol_fecha), CampoDB(TSolicitudes, sol_usuario), CampoDB(TSolicitudes, sol_codigo), CampoDB(TSolicitudes, sol_tipo), CampoDB(TSolicitudes, sol_mantenimiento))
+        valores = Array(Now(), GetCurrentUser, CodigoEquipo.Caption, "Servicio a Equipo", StringUtils.SetMantenimiento)
+        If DataBaseUtils.LogDB("Solicitud", "Servicio a " & CodigoEquipo.Caption, "Se genera la solicitud de un servicio al equipo " & CodigoEquipo.Caption) Then
+            Call DataBaseUtils.AddRegister(tabla, campos, valores)
+            MsgBox ("Registro de Servicio exitoso"), vbInformation
+            Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)
+            Call StringUtils.SeleccionColumnasTabla(TSolicitudes, campos)
+            Call Seguridad.LockSheet(ActiveSheet)
+            Unload Me
+        Else
+            MsgBox "Ha ocurrido un error de registro", vbExclamation
+            DataBaseUtils.RollBack (TAuditTrail)
+        End If
+        Exit Sub
+    End If
+    
     If Not Me.Solicitud.Visible Then
+        
         tabla = TSolicitudes
         campos = Array(CampoDB(TSolicitudes, sol_fecha), CampoDB(TSolicitudes, sol_usuario), CampoDB(TSolicitudes, sol_codigo), CampoDB(TSolicitudes, sol_tipo), CampoDB(TSolicitudes, sol_unidades))
-        valores = Array(Now(), GetCurrentUser, CodigoEquipo.Value, "EQUIPO", 1)
+        valores = Array(Now(), GetCurrentUser, CodigoEquipo.Caption, "EQUIPO", 1)
         
-        On Error GoTo ErrorDatos
-        If DataBaseUtils.AddRegister(tabla, campos, valores) Then
-        On Error GoTo 0
+        If DataBaseUtils.LogDB("Solicitud", "Equipo: " & CodigoEquipo.Caption, "Se genera la solicitud un equipo: " & CodigoEquipo.Caption) Then
+            Call DataBaseUtils.AddRegister(tabla, campos, valores)
             MsgBox ("Registro de Equipo exitoso"), vbInformation
             Unload Me
             Exit Sub
+        Else
+            MsgBox "Ha ocurrido un error de registro", vbExclamation
+            DataBaseUtils.RollBack (TAuditTrail)
         End If
     Else
     '===================================
@@ -95,27 +121,27 @@ Private Sub SolicitarEquipo_Click()
         NewEquip.Show
     
     End If
-    Exit Sub
-
-ErrorDatos:
-    MsgBox "Error de campos o valores en la tabla " & tabla, vbCritical
-    Exit Sub
+    
 End Sub
 
 Private Sub UserForm_Activate()
+    If Me.Caption = "Servicio a Equipo" Then
+        SCodigo.Enabled = False
+        SCodigo.Visible = False
+    End If
     Call GetMatrix
 End Sub
-Private Sub CodigoEquipo_Click()
-    fila = CodigoEquipo.ListIndex
+Private Sub EquipName_Change()
+    fila = Me.EquipName.ListIndex
     
-    If fila = -1 Or CodigoEquipo = Empty Then
+    If fila = -1 Or Me.EquipName = Empty Then
         CriticidadRed.Visible = False
         CriticidadYellow.Visible = False
         CriticidadGreen.Visible = False
         Exit Sub
     End If
     
-    EquipName.Caption = EquiposMatrix(2, fila) & ""
+    Me.CodigoEquipo.Caption = EquiposMatrix(1, fila) & ""
     MarcaEquipo.Caption = EquiposMatrix(3, fila) & ""
     ModeloEquipo.Caption = EquiposMatrix(4, fila) & ""
     Ubicacion.Caption = EquiposMatrix(15, fila) & ""

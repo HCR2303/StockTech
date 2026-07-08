@@ -14,6 +14,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Public registroSOLPED As Boolean
+Private tipo As String
 Const MODULE_NAME As String = "CostoRefaccion"
 Private Sub Costo_KeyPress(ByVal KeyAscii As MSForms.ReturnInteger)
     ' =======================================================
@@ -77,41 +78,52 @@ Private Sub RegisCosto_Click()
     Dim ref As String
     
     spd = Split(Me.SOLPEDLabel.Caption, "SOLPED: ")(1)
-    ref = Split(Me.RefaccionLabel.Caption, "Refacción: ")(1)
+    ref = Split(Me.TipoLabel.Caption, ": ")(1)
     
     'Registro en Tabla de SOLPED's
     
     Dim camposU As Variant
     Dim valoresU As Variant
     registroSOLPED = False
-    If LCase(ref) Like "serv" & "*" Then
-        camposU = Array(CampoDB(TSOLPEDs, spd_orden_compra), CampoDB(TSOLPEDs, spd_no_factura), CampoDB(TSOLPEDs, spd_unidades), CampoDB(TSOLPEDs, spd_costo))
-        valoresU = Array(Me.OCompra.Text, Me.NoFactura.Text, 1, CDbl(Me.Costo.Text))
-    Else
-        camposU = Array(CampoDB(TSOLPEDs, spd_orden_compra), CampoDB(TSOLPEDs, spd_no_factura), CampoDB(TSOLPEDs, spd_unidades), CampoDB(TSOLPEDs, spd_costo))
-        valoresU = Array(Me.OCompra.Text, Me.NoFactura.Text, CInt(Me.Unidades.Text), CDbl(Me.Costo.Text))
-    End If
+    
+    Select Case tipo
+        Case "equipo", "refacción"
+            camposU = Array(CampoDB(TSOLPEDs, spd_orden_compra), CampoDB(TSOLPEDs, spd_no_factura), CampoDB(TSOLPEDs, spd_unidades), CampoDB(TSOLPEDs, spd_costo))
+            valoresU = Array(Me.OCompra.Text, Me.NoFactura.Text, CInt(Me.Unidades.Text), CDbl(Me.Costo.Text))
+            
+            If tipo = "refacción" Then
+                tablaMaterial = TRefacciones
+                idMaterial = DataBaseUtils.DatoDataBase(tablaMaterial, CampoDB(TRefacciones, ref_material), ref, CampoDB(TRefacciones, ref_id))
+                If idMaterial = 0 Then
+                    MsgBox "La refacción o equipo NO está dada de Alta en la Base de Batos, verifique los listados", vbCritical
+                    Unload Me
+                    Exit Sub
+                End If
+            End If
+        
+        Case "servicio de área", "servicio a equipo"
+            camposU = Array(CampoDB(TSOLPEDs, spd_orden_compra), CampoDB(TSOLPEDs, spd_no_factura), CampoDB(TSOLPEDs, spd_costo))
+            valoresU = Array(Me.OCompra.Text, Me.NoFactura.Text, CDbl(Me.Costo.Text))
+    End Select
+    
     Dim camposWh As Variant
     Dim valoresWh As Variant
-    camposWh = Array(CampoDB(TSOLPEDs, spd_solped), CampoDB(TSOLPEDs, SPD_REFACCION))
+    camposWh = Array(CampoDB(TSOLPEDs, spd_solped), CampoDB(TSOLPEDs, spd_codigo))
     valoresWh = Array(spd, ref)
     
     
+    
     If DataBaseUtils.SetRegister(TSOLPEDs, camposU, valoresU, camposWh, valoresWh) Then
-        
-        'Registro de actualización de STOCK
-        If Not LCase(ref) Like "serv" & "*" Then ' La actualización de STOCK solo ocurre en refacciones distintas a servicio
+        If tipo = "refacción" Then
             Dim stockAnterior As Integer
-            Dim idRefaccion As Integer
+            
             stockAnterior = DataBaseUtils.DatoDataBase(TRefacciones, CampoDB(TRefacciones, ref_material), ref, CampoDB(TRefacciones, ref_stock))
-            idRefaccion = DataBaseUtils.DatoDataBase(TRefacciones, CampoDB(TRefacciones, ref_material), ref, CampoDB(TRefacciones, ref_id))
-        
-            If DataBaseUtils.SetDataByID(TRefacciones, CampoDB(TRefacciones, ref_stock), stockAnterior + CInt(Me.Unidades.Text), idRefaccion) Then
+            
+            If DataBaseUtils.SetDataByID(TRefacciones, CampoDB(TRefacciones, ref_stock), stockAnterior + CInt(Me.Unidades.Text), idMaterial) Then
                 registroSOLPED = True
             End If
-        Else
-            registroSOLPED = True
         End If
+        registroSOLPED = True
     End If
     Unload Me
     
@@ -119,11 +131,37 @@ End Sub
 
 Private Sub UserForm_Activate()
     Dim ref As String
-    ref = Split(Me.RefaccionLabel.Caption, "Refacción: ")(1)
-    If LCase(ref) Like "serv" & "*" Then
-        Me.Unidades.Enabled = False
-        Me.Unidades.Visible = False
-        Me.UnidadesLabel.Visible = False
+    Dim spd As String
+    spd = CStr(Split(Me.SOLPEDLabel.Caption, ": ")(1))
+    ref = CStr(Split(Me.TipoLabel.Caption, ": ")(1))
+    Dim tipoRS As ADODB.Recordset
+    
+    Dim sql As String
+    sql = "SELECT [" & CampoDB(TSOLPEDs, spd_tipo) & "] FROM [" & TSOLPEDs & "] WHERE [" & CampoDB(TSOLPEDs, spd_solped) & "] = '" & spd & "' AND [" & CampoDB(TSOLPEDs, spd_codigo) & "] = '" & ref & "'"
+    Set tipoRS = DataBaseUtils.ConsultaSQL(sql, DataBaseUtils.GetDBConnection)
+    tipo = tipoRS.Fields(CampoDB(TSOLPEDs, spd_tipo)).Value
+    
+    On Error Resume Next
+    If Not tipoRS Is Nothing Then
+        If tipoRS.State <> 0 Then tipoRS.Close
+        Set tipoRS = Nothing
+    End If
+    On Error GoTo 0
+    
+    If tipo <> Empty Then
+        tipo = LCase(tipo)
+        Select Case tipo
+        
+            Case "equipo"
+                Me.Unidades.Text = 1
+                Me.Unidades.Enabled = False
+                
+            Case "servicio a equipo", "servicio de área"
+                Me.Unidades.Enabled = False
+                Me.Unidades.Visible = False
+                Me.UnidadesLabel.Visible = False
+                
+        End Select
     End If
 End Sub
 

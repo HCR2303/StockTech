@@ -33,7 +33,7 @@ Sub StockTechRibbonX(LabelsXML As IRibbonUI)
     Dim MemoryPath As String
     MemoryPath = CStr(ObjPtr(LabelsXML))
     
-    ThisWorkbook.Names.Add Name:="StockTechLabelsID", RefersTo:=MemoryPath, Visible:=False
+    ThisWorkbook.Names.Add name:="StockTechLabelsID", RefersTo:=MemoryPath, Visible:=False
 End Sub
 'Metodo para reestablecer la cinta de opciones en caso de errores inesperados
 Sub ResetLabels()
@@ -172,8 +172,12 @@ Sub OnAction_Ribbon(control As IRibbonControl)
     Select Case control.id
     
         Case "NewCodsBttn"
-            TipoSolicitud.Caption = "Códigos Nvos"
-            TipoSolicitud.Show
+            With TipoSolicitud
+                .Caption = "Códigos Nvos"
+                .Servicio.Visible = False
+                .Servicio.Enabled = False
+                .Show
+            End With
             
         Case "NewSolicitudBttn"
             TipoSolicitud.Show
@@ -332,10 +336,10 @@ Sub ExportarTodoElProyecto()
         
         ' Elegir extensión según tipo
         Select Case oComponent.Type
-            Case 1: sArchivo = sRuta & oComponent.Name & ".bas"   ' Módulo estándar
-            Case 2: sArchivo = sRuta & oComponent.Name & ".cls"   ' Clase
-            Case 3: sArchivo = sRuta & oComponent.Name & ".frm"   ' UserForm
-            Case 100: sArchivo = sRuta & oComponent.Name & ".cls" ' ThisWorkbook / hojas
+            Case 1: sArchivo = sRuta & oComponent.name & ".bas"   ' Módulo estándar
+            Case 2: sArchivo = sRuta & oComponent.name & ".cls"   ' Clase
+            Case 3: sArchivo = sRuta & oComponent.name & ".frm"   ' UserForm
+            Case 100: sArchivo = sRuta & oComponent.name & ".cls" ' ThisWorkbook / hojas
         End Select
         
         ' Exportar el componente

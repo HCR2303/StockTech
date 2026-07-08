@@ -26,7 +26,7 @@ Private Sub Consultar_Click()
             ' 2. ¡CRÍTICO! Solo nos importa el que está seleccionado
             If ctrl.Value = True Then
                 valido = True
-                Select Case ctrl.Name
+                Select Case ctrl.name
                     Case "Equipos"
                         DataBaseUtils.GetExcelTable TEquipos, refresh:=True
                         

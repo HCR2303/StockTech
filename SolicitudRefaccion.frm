@@ -30,29 +30,26 @@ Function GetMatrix()
     Filas = UBound(RefaccionMatrix, 2)
     ReDim RefaccionList(0 To Filas)
     For i = 0 To Filas
-        RefaccionList(i) = RefaccionMatrix(1, i) & ""
+        RefaccionList(i) = RefaccionMatrix(2, i) & ""
     Next
     
-    RefaccionCodigo.List = RefaccionList
+    Me.RefaccionName.List = RefaccionList
     
 End Function
 
 
-Private Sub RefaccionCodigo_Change()
-    fila = RefaccionCodigo.ListIndex
+Private Sub RefaccionName_Change()
+    fila = RefaccionName.ListIndex
     
-    If fila = -1 Or RefaccionCodigo = Empty Then
+    If fila = -1 Or RefaccionName = Empty Then
         Rrojo.Visible = False
         Ramarillo.Visible = False
         Rverde.Visible = False
         Nulo.Visible = False
         Exit Sub
     End If
-    If UCase(RefaccionCodigo.Value) Like "SER" & "*" Then
-        Me.Unidades.Value = 1
-        Me.Unidades.Enabled = False
-    End If
-    RefaccionName.Caption = RefaccionMatrix(2, fila)
+    
+    Me.RefaccionCodigo.Caption = RefaccionMatrix(1, fila)
     Stock.Caption = RefaccionMatrix(4, fila) & " " & RefaccionMatrix(3, fila)
     Criticidad = RefaccionMatrix(6, fila)
     Select Case Criticidad
@@ -74,6 +71,10 @@ Private Sub RefaccionCodigo_Change()
         Case Else
             Nulo.Visible = True
         End Select
+End Sub
+
+Private Sub RefaccionName_Click()
+    Call RefaccionName_Change
 End Sub
 
 Private Sub SCodigo_Click()
@@ -103,14 +104,14 @@ Private Sub SolicitarRefaccion_Click()
         NewRefaction.Show
         Exit Sub
     End If
-    If RefaccionCodigo.Value = Empty Or Unidades.Value = Empty Then
+    If RefaccionCodigo.Caption = Empty Or Unidades.Value = Empty Then
         MsgBox "Uno o mas campos del formulario está vacío. " & vbNewLine & "Complete para continuar", vbInformation
         Exit Sub
     End If
-    campos = Array(CampoDB(TSolicitudes, sol_fecha), CampoDB(TSolicitudes, sol_usuario), CampoDB(TSolicitudes, sol_codigo), CampoDB(TSolicitudes, sol_tipo), CampoDB(TSolicitudes, sol_unidades), CampoDB(TSolicitudes, sol_realizada))
-    valores = Array(Now(), GetCurrentUser, RefaccionCodigo.Value, "REFACCIÓN", CInt(Unidades.Value), False)
+    campos = Array(CampoDB(TSolicitudes, sol_fecha), CampoDB(TSolicitudes, sol_usuario), CampoDB(TSolicitudes, sol_codigo), CampoDB(TSolicitudes, sol_tipo), CampoDB(TSolicitudes, sol_unidades), CampoDB(TSolicitudes, sol_realizada), CampoDB(TSolicitudes, sol_mantenimiento))
+    valores = Array(Now(), GetCurrentUser, RefaccionCodigo.Caption, "REFACCIÓN", CInt(Unidades.Value), False, StringUtils.SetMantenimiento)
     
-    If DataBaseUtils.LogDB("Solicitud", "Refacción: " & RefaccionCodigo.Value, "Se crea solicitud de refacción: " & RefaccionCodigo.Value) Then
+    If DataBaseUtils.LogDB("Solicitud", "Refacción: " & RefaccionCodigo.Caption, "Se crea solicitud de refacción: " & RefaccionCodigo.Caption) Then
         If DataBaseUtils.AddRegister(TSolicitudes, campos, valores) Then
             MsgBox "Registro exitoso", vbInformation, "Registro de Refacción"
             Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)

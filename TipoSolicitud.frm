@@ -1,7 +1,7 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} TipoSolicitud 
    Caption         =   "Crear solicitud"
-   ClientHeight    =   1788
+   ClientHeight    =   2376
    ClientLeft      =   108
    ClientTop       =   456
    ClientWidth     =   2196
@@ -14,6 +14,11 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Const MODULE_NAME As String = "TipoSolicitud"
+
+Private Sub Servicio_Click()
+    Unload Me
+    TipoServicio.Show
+End Sub
 
 Private Sub SolEquipo_Click()
     

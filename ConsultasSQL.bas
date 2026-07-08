@@ -5,7 +5,7 @@ Const MODULE_NAME As String = "ConsultasSQL"
 Public Function GetSaldoCuenta(ByVal NumeroCuenta As String) As Double
     Const PROC_NAME As String = "GetSaldoCuenta"
     Dim rs As Object
-    Dim SQL As String
+    Dim sql As String
     Dim presupuestoBase As Double
     Dim totalGastado As Double
     Dim camposPresupuestos As Variant
@@ -14,13 +14,13 @@ Public Function GetSaldoCuenta(ByVal NumeroCuenta As String) As Double
     Dim camposSOLPEDs As Variant
     camposSOLPEDs = CamposTablaDB(TSOLPEDs)
     
-    SQL = "SELECT [" & camposPresupuestos(pre_presupuesto) & "], " & _
+    sql = "SELECT [" & camposPresupuestos(pre_presupuesto) & "], " & _
           "(SELECT SUM([" & camposSOLPEDs(spd_costo) & "]) FROM [" & TSOLPEDs & "] " & _
           "WHERE [" & camposSOLPEDs(spd_cuenta) & "] = [" & TPresupuestos & "].[" & camposPresupuestos(pre_id_cuenta) & "]) AS [TotalCosto] " & _
           "FROM [" & TPresupuestos & "] WHERE [" & camposPresupuestos(pre_id_cuenta) & "] = '" & NumeroCuenta & "'"
     
     On Error GoTo ErrorHandler
-    Set rs = DataBaseUtils.ConsultaSQL(SQL, DataBaseUtils.GetDBConnection)
+    Set rs = DataBaseUtils.ConsultaSQL(sql, DataBaseUtils.GetDBConnection)
     
     If Not rs.EOF Then
         presupuestoBase = IIf(IsNull(rs.Fields(camposPresupuestos(pre_presupuesto)).Value), 0, rs.Fields(camposPresupuestos(pre_presupuesto)).Value)
@@ -49,7 +49,7 @@ End Function
 Public Function GetTablaDetalleUsuario(ByVal nombreUsuario As String) As Variant
     Const PROC_NAME As String = "GetTablaDetalleUsuario"
     Dim rs As Object
-    Dim SQL As String
+    Dim sql As String
     
     Dim arrSol As Variant
     Dim arrSpd As Variant
@@ -64,13 +64,13 @@ Public Function GetTablaDetalleUsuario(ByVal nombreUsuario As String) As Variant
         arrSol(CNameSolicitudes.sol_fecha), _
         arrSol(CNameSolicitudes.sol_codigo), _
         arrSpd(CNameSOLPEDs.spd_solped), _
-        arrSpd(CNameSOLPEDs.SPD_REFACCION), _
+        arrSpd(CNameSOLPEDs.spd_codigo), _
         arrSpd(CNameSOLPEDs.spd_costo), _
         arrSpd(CNameSOLPEDs.spd_cuenta), _
         "Estado_Operativo" _
     )
     
-    SQL = "SELECT Sol.[" & arrHeaders(0) & "], " & _
+    sql = "SELECT Sol.[" & arrHeaders(0) & "], " & _
                  "Sol.[" & arrHeaders(1) & "], " & _
                  "Sol.[" & arrHeaders(2) & "], " & _
                  "Spd.[" & arrHeaders(3) & "], " & _
@@ -85,7 +85,7 @@ Public Function GetTablaDetalleUsuario(ByVal nombreUsuario As String) As Variant
           "ORDER BY Sol.[" & arrHeaders(1) & "] DESC"
 
     On Error GoTo ErrorHandler
-    Set rs = DataBaseUtils.ConsultaSQL(SQL, DataBaseUtils.GetDBConnection)
+    Set rs = DataBaseUtils.ConsultaSQL(sql, DataBaseUtils.GetDBConnection)
     
     If Not rs.EOF Then
         GetTablaDetalleUsuario = Array(rs.GetRows, arrHeaders)
@@ -212,7 +212,7 @@ Public Sub CostByCountFromUser(ByVal ws As Worksheet, ByVal user As String, ByVa
         Width:=350, _
         Height:=220)
         
-    chtObj.Name = nombreGrafico
+    chtObj.name = nombreGrafico
     
     Set cht = chtObj.Chart
     cht.ChartType = xlColumnClustered
@@ -228,7 +228,7 @@ Public Sub CostByCountFromUser(ByVal ws As Worksheet, ByVal user As String, ByVa
     With Serie
         .XValues = ws.Range(ws.Cells(2, colInicio), ws.Cells(ultimaFilaResumen, colInicio))
         .Values = ws.Range(ws.Cells(2, colInicio + 1), ws.Cells(ultimaFilaResumen, colInicio + 1))
-        .Name = "Costo por Cuenta"
+        .name = "Costo por Cuenta"
     End With
     
     ' =======================================================

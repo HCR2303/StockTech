@@ -134,7 +134,7 @@ Public Sub DropFromArray(ByRef matriz As Variant, ByVal indexToRemove As Long)
     
     ReDim Preserve matriz(lowerBound To upperBound - 1)
 End Sub
-Public Sub SeleccionColumnasTabla(ByVal tabla As String, ByVal CamposVisibles As Variant, Optional UltimoValor As Boolean = False)
+Public Sub SeleccionColumnasTabla(ByVal tabla As String, ByVal camposVisibles As Variant, Optional UltimoValor As Boolean = False)
     Dim ws As Worksheet
     Dim lo As ListObject
     Dim i As Long
@@ -163,18 +163,18 @@ Public Sub SeleccionColumnasTabla(ByVal tabla As String, ByVal CamposVisibles As
     arrCampos = TablasDB.CamposTablaDB(tabla)
     
     ' 5. Iteración y Traducción
-    For i = LBound(CamposVisibles) To UBound(CamposVisibles)
+    For i = LBound(camposVisibles) To UBound(camposVisibles)
         
         ' Evaluamos si el dato es un número (Enum) o un Texto (Nombre directo)
-        If IsNumeric(CamposVisibles(i)) Then
+        If IsNumeric(camposVisibles(i)) Then
             ' Escudo de límites: Verificamos que el Enum exista en la tabla
-            If CamposVisibles(i) >= LBound(arrCampos) And CamposVisibles(i) <= UBound(arrCampos) Then
-                nombreColumna = arrCampos(CamposVisibles(i))
+            If camposVisibles(i) >= LBound(arrCampos) And camposVisibles(i) <= UBound(arrCampos) Then
+                nombreColumna = arrCampos(camposVisibles(i))
             Else
                 nombreColumna = ""
             End If
         Else
-            nombreColumna = CStr(CamposVisibles(i))
+            nombreColumna = CStr(camposVisibles(i))
         End If
         
         ' 6. Mostrar la columna por su NOMBRE EXACTO (A prueba de movimientos físicos en Excel)
@@ -309,7 +309,13 @@ Public Function GetIdFromExcel(tabla As String) As Integer
     End If
     
 End Function
-Public Function EstablecerFecha() As Date
+Public Function EstablecerFecha(Optional ByVal tipoFecha As String = "") As Date
+    
+    If tipoFecha <> "" Then
+        MsgBox "Establezca la fecha para " & UCase(tipoFecha)
+        Calendario.Caption = UCase(tipoFecha)
+    End If
+    
     Calendario.Show
     While Calendario.fechaSeleccionada = Empty
         MsgBox "La selección de una fecha es obligatorio", vbExclamation, "Registro de fecha"
@@ -325,12 +331,7 @@ Public Function CerrarRefaccion(ByVal Refaccion As String, ByVal SOLPED As Strin
     
     With CostoRefaccion
         .SOLPEDLabel = .SOLPEDLabel.Caption & SOLPED
-        .RefaccionLabel = .RefaccionLabel.Caption & Refaccion
-        If Refaccion Like "Serv" & "*" Then
-            .Unidades.Enabled = False
-            .UnidadesLabel.Visible = False
-            .Unidades.Visible = False
-        End If
+        .TipoLabel = "Refacción: " & Refaccion
         .Show
         exito = .registroSOLPED
     End With
@@ -404,3 +405,14 @@ Public Sub FiltrarTabla(ByVal nombreTabla As String, ByVal nombreColumna As Stri
     Application.Goto Reference:=tbl.HeaderRowRange(1, 1), Scroll:=True
     
 End Sub
+Function SetMantenimiento() As String
+    Dim man As String
+    While man = ""
+        With TipoMantenimiento
+            .Show
+            man = .mantenimiento
+        End With
+        Unload TipoMantenimiento
+    Wend
+    SetMantenimiento = UCase(man)
+End Function

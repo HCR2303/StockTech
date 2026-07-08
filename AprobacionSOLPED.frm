@@ -1,7 +1,7 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} AprobacionSOLPED 
    Caption         =   "Aprobación de SOLPED's"
-   ClientHeight    =   7356
+   ClientHeight    =   7308
    ClientLeft      =   108
    ClientTop       =   456
    ClientWidth     =   10824
@@ -263,97 +263,130 @@ Public Sub CargarDatosSOLPED(ByVal idSolpedSeleccionada As String)
     Dim arrEqu As Variant
     Dim arrCta As Variant
     Dim arrProv As Variant
+    Dim camposUbic As Variant
     
-    ' Inyección directa en tu motor de extracción de tablas
+    ' =======================================================
+    ' PASO 1: EXTRACCIÓN MAESTRA
+    ' =======================================================
     arrSpd = DataBaseUtils.TableDataBase(TSOLPEDs, "*", False, "[" & CampoDB(TSOLPEDs, spd_solped) & "] = '" & idSolpedSeleccionada & "'")
     
     If IsEmpty(arrSpd) Then Exit Sub
     
-    ' 2. Llenamos los TextBox y Captions de forma segura (Sin Resume Next)
-    Dim valEquipo As Variant
+    ' =======================================================
+    ' PASO 2: LIMPIEZA VISUAL DEL ENTORNO
+    ' =======================================================
+    Me.Refacciones.Visible = False
+    Me.Equipo.Visible = False
+    Me.Area.Visible = False
+    
+    ' =======================================================
+    ' PASO 3: EXTRACCIÓN SEGURA DE MATRICES (Blindaje de Índices)
+    ' =======================================================
+    Dim valTipo As Variant
+    Dim valCodigo As Variant
     Dim valProveedor As Variant
     Dim valUnico As Variant
     Dim valCuenta As Variant
     
-    ' Extraemos las matrices de valores únicos
-    valEquipo = DataBaseUtils.UniqueValues(CNameSOLPEDs.spd_codigo_equipo, arrSpd)
+    Dim tipoSolped As String
+    Dim Codigo As String
+    
+    ' Obtenemos las matrices de la consulta principal
+    valTipo = DataBaseUtils.UniqueValues(spd_tipo, arrSpd)
+    valCodigo = DataBaseUtils.UniqueValues(spd_codigo, arrSpd)
     valProveedor = DataBaseUtils.UniqueValues(CNameSOLPEDs.spd_proveedor, arrSpd)
     valUnico = DataBaseUtils.UniqueValues(CNameSOLPEDs.spd_proveedor_unico, arrSpd)
     valCuenta = DataBaseUtils.UniqueValues(CNameSOLPEDs.spd_cuenta, arrSpd)
     
-    ' Asignamos el índice 0 a la interfaz (solo si la matriz no está vacía)
-    If Not IsEmpty(valEquipo) Then Me.CodigoEquipo.Caption = valEquipo(0)
-    If Not IsEmpty(valProveedor) Then Me.ProveedorName.Caption = valProveedor(0)
-    If Not IsEmpty(valCuenta) Then
-        Me.NumeroCuenta.Caption = valCuenta(0)
-        arrCta = CamposTablaDB(TCuentas)
-        Me.CountName.Caption = DataBaseUtils.DatoDataBase(TCuentas, arrCta(cta_id_cuenta), valCuenta(0), arrCta(cta_nombre))
-    End If
+    ' Validamos y casteamos el tipo a texto plano sacando el índice (0)
+    If Not IsEmpty(valTipo) Then tipoSolped = LCase(Trim(valTipo(0) & ""))
+    If Not IsEmpty(valCodigo) Then Codigo = CStr(valCodigo(0) & "")
     
-    ' Para propiedades Booleanas (True/False) como Visible, hacemos una conversión estricta
-    If Not IsEmpty(valUnico) Then
-        Me.Unico.Visible = CBool(valUnico(0))
-    End If
-    ' Relleno para frame de EQUIPOS
-    arrEqu = DataBaseUtils.TableDataBase(TEquipos, "*", False, CampoDB(TEquipos, equ_codigo) & " = '" & Me.CodigoEquipo.Caption & "'")
-    If Not IsEmpty(arrEqu) Then
-        Me.MarcaEquipo.Caption = arrEqu(CNameEquipos.equ_marca, 0)
-        Me.ModeloEquipo.Caption = arrEqu(CNameEquipos.equ_modelo, 0)
-        Me.EquipName.Caption = arrEqu(CNameEquipos.equ_nombre, 0)
-        Dim Criticidad As String
-        Criticidad = LCase(arrEqu(CNameEquipos.equ_criticidad, 0)) & ""
-        Select Case Criticidad
-            Case "alto"
-                CriticidadRed.Visible = True
-                CriticidadYellow.Visible = False
-                CriticidadGreen.Visible = False
-            Case "medio"
-                CriticidadRed.Visible = False
-                CriticidadYellow.Visible = True
-                CriticidadGreen.Visible = False
-            Case Else
-                CriticidadRed.Visible = False
-                CriticidadYellow.Visible = False
-                CriticidadGreen.Visible = True
-        End Select
-        Dim camposUbic As Variant
-        camposUbic = TablasDB.CamposTablaDB(TUbicaciones)
-        Dim ubic As String
-        ubic = DataBaseUtils.DatoDataBase(TUbicaciones, camposUbic(ubi_id_ubicacion), arrEqu(equ_id_ubicacion, 0), camposUbic(ubi_ubicacion))
-        Me.Ubicacion.Caption = ubic
-    End If
-    
-    ' Relleno para frame de PROVEEDORES
-    Dim codigoProv As Variant
-    Dim camposProv As Variant
-
-    camposProv = TablasDB.CamposTablaDB(TProveedores)
-    codigoProv = DataBaseUtils.DatoDataBase(TProveedores, camposProv(prv_nombre), Me.ProveedorName.Caption, camposProv(prv_codigo))
-    If Not IsEmpty(codigoProv) Then
-        Me.CodigoProveedor.Caption = CStr(codigoProv)
-    End If
-    
-    ' =========================================================
-    ' Relleno para frame de REFACCIONES
-    ' =========================================================
-    Dim valRefacciones As Variant
-    
-    ' Usamos el procesamiento en memoria RAM (Ruta B de tu UniqueValues)
-    valRefacciones = DataBaseUtils.UniqueValues(CNameSOLPEDs.SPD_REFACCION, arrSpd)
-    
-    Me.RefaccionesCods.Clear
-    
-    If Not IsEmpty(valRefacciones) Then
-        ' Prevención del Error 9 (Subíndice fuera del intervalo)
-        If UBound(valRefacciones) = 0 Then
-            ' Si la SOLPED tiene exactamente 1 sola refacción
-            Me.RefaccionesCods.AddItem valRefacciones(0)
-        Else
-            ' Si la SOLPED tiene múltiples refacciones distintas
-            Me.RefaccionesCods.List = valRefacciones
-        End If
+    ' =======================================================
+    ' PASO 4: MOTOR DE RUTEO (Mutación de Interfaz)
+    ' =======================================================
+    Select Case tipoSolped
         
+        ' ---------------------------------------------------
+        ' RUTA A: EQUIPOS Y SERVICIOS
+        ' ---------------------------------------------------
+        Case "servicio a equipo", "equipo"
+            Me.Equipo.Visible = True
+            ' Ahora sí asignamos el código del equipo a la interfaz
+            Me.CodigoEquipo.Caption = Codigo
+            
+            arrEqu = DataBaseUtils.TableDataBase(TEquipos, "*", False, CampoDB(TEquipos, equ_codigo) & " = '" & Codigo & "'")
+            
+            If Not IsEmpty(arrEqu) Then
+                ' Inyección segura con (& "")
+                Me.MarcaEquipo.Caption = arrEqu(CNameEquipos.equ_marca, 0) & ""
+                Me.ModeloEquipo.Caption = arrEqu(CNameEquipos.equ_modelo, 0) & ""
+                Me.EquipName.Caption = arrEqu(CNameEquipos.equ_nombre, 0) & ""
+                
+                Dim Criticidad As String
+                Criticidad = LCase(Trim(arrEqu(CNameEquipos.equ_criticidad, 0) & ""))
+                
+                ' Semáforo de Criticidad
+                CriticidadRed.Visible = False
+                CriticidadYellow.Visible = False
+                CriticidadGreen.Visible = False
+                
+                Select Case Criticidad
+                    Case "alto": CriticidadRed.Visible = True
+                    Case "medio": CriticidadYellow.Visible = True
+                    Case Else: CriticidadGreen.Visible = True
+                End Select
+                
+                ' Extracción de Ubicación
+                camposUbic = TablasDB.CamposTablaDB(TUbicaciones)
+                Dim ubic As String
+                ' Aseguramos el uso correcto de las fábricas sin mezclar tipos
+                ubic = DataBaseUtils.DatoDataBase(TUbicaciones, camposUbic(ubi_id_ubicacion), arrEqu(CNameEquipos.equ_id_ubicacion, 0), camposUbic(ubi_ubicacion))
+                Me.Ubicacion.Caption = ubic & ""
+            End If
+            
+        ' ---------------------------------------------------
+        ' RUTA B: REFACCIONES
+        ' ---------------------------------------------------
+        Case "refacción"
+            Me.Refacciones.Visible = True
+            Me.RefaccionesCods.Clear
+            
+            ' valCodigo ya contiene la matriz de refacciones de esta SOLPED
+            If Not IsEmpty(valCodigo) Then
+                If UBound(valCodigo) = 0 Then
+                    Me.RefaccionesCods.AddItem valCodigo(0)
+                Else
+                    Me.RefaccionesCods.List = valCodigo
+                End If
+            End If
+            
+        ' ---------------------------------------------------
+        ' RUTA C: SERVICIO DE ÁREA
+        ' ---------------------------------------------------
+        Case "servicio de área"
+            Me.Area.Visible = True
+            
+            camposUbic = TablasDB.CamposTablaDB(TUbicaciones)
+            ' Corrección de errores tipográficos en las fábricas
+            ubic = DataBaseUtils.DatoDataBase(TUbicaciones, camposUbic(ubi_id_ubicacion), Codigo, camposUbic(ubi_ubicacion))
+            
+            Me.NombreUbic.Caption = ubic & ""
+            Me.CodigoUbic.Caption = Codigo
+    End Select
+        
+    ' =======================================================
+    ' PASO 5: RENDERIZADO DE DATOS GLOBALES
+    ' =======================================================
+    If Not IsEmpty(valCuenta) Then
+        Me.NumeroCuenta.Caption = valCuenta(0) & ""
+        arrCta = TablasDB.CamposTablaDB(TCuentas)
+        Me.CountName.Caption = DataBaseUtils.DatoDataBase(TCuentas, arrCta(cta_id_cuenta), valCuenta(0), arrCta(cta_nombre)) & ""
     End If
+    
+    ' Si el proveedor único es relevante para tu interfaz, lo asignarías aquí:
+    ' If Not IsEmpty(valProveedor) Then Me.ProveedorLabel.Caption = valProveedor(0) & ""
+       
 End Sub
 Public Function RefaccionesSeleccionadas() As Variant
     Dim i As Long

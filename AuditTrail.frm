@@ -21,6 +21,10 @@ Private Sub CancelAudit_Click()
     Unload Me
 End Sub
 
+Private Sub UserForm_Activate()
+    Me.Comentario.Text = Empty
+End Sub
+
 ' Interceptamos si el usuario intenta cerrar con la "X" de la ventana
 Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
     If CloseMode = vbFormControlMenu Then ' 0 = El usuario presionó la "X"

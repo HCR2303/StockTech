@@ -12,7 +12,7 @@ Sub RegistrarSOLPED()
     If StringUtils.ExisteHoja(shName) Then ' se verifica que exista la hoja
         Set sh = ActiveWorkbook.Worksheets(shName)
         If Seguridad.GetStockTechSheetName(sh) = shName Then ' se verifica que pertenece a la base de datos
-            If Not ActiveSheet.Name <> shName Then ' se verifica si la selección ya estaba hecha
+            If Not ActiveSheet.name <> shName Then ' se verifica si la selección ya estaba hecha
                 sh.Activate
                 If Selection.Rows.Count = 1 Then
                     If Cells(Selection.Row, 7) = False Then
@@ -44,7 +44,7 @@ Sub RegistrarSOLPED()
                                         End If
                                         
                                         With registroSOLPED
-                                            .CodigoEquipo.Value = cod
+                                            .EquipName.Value = cod
                                             .GetMatrix
                                             .RefreshEquipment (True)
                                             .CodigoEquipo.Enabled = False
@@ -70,7 +70,7 @@ Sub RegistrarSOLPED()
                                         End If
                                         
                                         With registroSOLPED
-                                            .RefaccionCodigo.Value = cod
+                                            .RefaccionName.Value = cod
                                             .GetMatrix
                                             .RefreshRefaction (True)
                                             .Show
@@ -126,9 +126,8 @@ Sub UpdateSheet()
             MsgBox "No se guardará la trazabilidad de cambios nulos en la tabla: " & UCase(shName), vbExclamation, "No AuditTrail"
             Exit Sub
         End If
-        If DataBaseUtils.SystemLogDB("Actualización", "Tabla: " & UCase(shName) & " Registro Anterior: " & registroAnt) Then
-            MsgBox "Actualización de la registro en" & UCase(shName) & " exitosa!", vbInformation, "Actualización"
-        End If
+        MsgBox "Actualización de la registro en" & UCase(shName) & " exitosa!", vbInformation, "Actualización"
+        
     End If
     
     App.EnfocarStockTechLabels
@@ -218,7 +217,7 @@ Sub CalculosPresupuestos()
         Width:=450, _
         Height:=250)
         
-    chtObj.Name = nombreGrafico
+    chtObj.name = nombreGrafico
     Set cht = chtObj.Chart
     cht.ChartType = xlColumnClustered
     
@@ -233,7 +232,7 @@ Sub CalculosPresupuestos()
     With Serie
         .Values = tbl.ListColumns(columnaNva2).DataBodyRange
         .XValues = tbl.ListColumns(CampoDB(TPresupuestos, pre_id_cuenta)).DataBodyRange
-        .Name = columnaNva2
+        .name = columnaNva2
     End With
     
     ' =======================================================
@@ -299,6 +298,8 @@ Sub EliminarRegistro()
     Call Left(registro, Len(registro) - 4)
     
     If id <> 0 Then
+        r = MsgBox("¿Está seguro de eliminar el registro?", vbYesNo, "Eliminación de Registro")
+        If r = vbNo Then Exit Sub
         If DataBaseUtils.LogDB("Elimnación", "Registro con ID: " & id, "Se elimna Registro: " & registro) Then
             If DataBaseUtils.DeleteRegisterByID(tabla, id) Then
                 MsgBox "Eliminación exitosa", vbInformation, "Eliminación en DB"
@@ -317,7 +318,7 @@ Sub EditarRegistro()
     Dim tabla As String
     tabla = Seguridad.GetStockTechSheetName(ActiveSheet)
     If tabla = Empty Then
-        MsgBox "La Hoja seleccionada no pertenece a StoskTech"
+        MsgBox "La Hoja seleccionada no pertenece a StockTech"
         Exit Sub
     End If
     If tabla = TAuditTrail Then
@@ -339,34 +340,57 @@ Sub EditarRegistro()
             ActiveSheet.Cells.Locked = False
             MsgBox "Puede editar la Hoja", vbInformation, "Edición masiva"
             Exit Sub
+        Else
+            edicionTotal = False
         End If
     End If
     fila = Selection.Row
     id = CInt(Cells(fila, 1).Value)
     Dim campos As Variant
-    campos = CamposTablaDB(tabla)
+    Dim valCelda As String
+    Dim RG As Range
+    
+    campos = TablasDB.CamposTablaDB(tabla)
     
     If id <> 0 And Selection.Rows.Count = 1 Then
         registroAnt = ""
-        For i = 0 To UBound(campos)
-            registroAnt = registroAnt & campos(i) & ": " & Cells(fila, i + 1) & "  " & Chr(13)
-        Next
-        Call Left(registroAnt, Len(registroAnt) - 8)
         
-        Dim RG As Range
+        For i = LBound(campos) To UBound(campos)
+            ' Extraemos el valor de la celda y lo blindamos contra nulos
+            valCelda = Trim(CStr(Cells(fila, i + 1).Value & ""))
+            
+            ' Filtro Quirúrgico: Solo concatenamos si la celda tiene información real.
+            ' Omitir campos vacíos puede reducir el tamaño de la cadena hasta en un 70%.
+            If valCelda <> "" Then
+                ' Sustituimos el Chr(13) por un separador visual limpio
+                registroAnt = registroAnt & campos(i) & ": " & valCelda & " | "
+            End If
+        Next i
+        
+        If Len(registroAnt) > 0 Then
+            ' Sobreescribimos la variable para cortarle los últimos 3 caracteres (" | ")
+            registroAnt = Left(registroAnt, Len(registroAnt) - 3)
+        Else
+            registroAnt = "REGISTRO VACÍO"
+        End If
+        
+        If Len(registroAnt) > 3000 Then
+            registroAnt = Left(registroAnt, 2985) & " [TRUNCADO]"
+        End If
         
         Set RG = ActiveSheet.Range(ActiveSheet.Cells(fila, 2), ActiveSheet.Cells(fila, UBound(campos) + 1))
         
         With RG
             .Locked = False
-            ' color amarillo
+            ' Color amarillo de advertencia de edición activa
             .Interior.Color = RGB(255, 255, 0)
             .Font.Color = RGB(0, 0, 0)
         End With
-        MsgBox "Registro habilitado para edición. Terminando actualice la tabla"
+        
+        MsgBox "Registro habilitado para edición. Terminando, actualice la tabla.", vbInformation, "Edición StockTech"
         Exit Sub
     End If
-    MsgBox "Seleccione un registro válido", vbInformation, "Modificación No Válida" ' Ruta para la edición de un ID inválido
+
 End Sub
 Public Sub VerUserDetails(ByVal user As String)
     Dim tabla As Variant
@@ -417,15 +441,23 @@ Public Sub VerUserDetails(ByVal user As String)
     Call App.EnfocarStockTechLabels
 End Sub
 Sub AprobarSOLPED()
-    r = MsgBox("¿Desea ver la tabla de SOLPED's pendientes por aprobación?", vbYesNo, "StockTech Aprobación")
-    If r = vbYes Then
+    If ActiveSheet.name <> TSOLPEDs Then
+        r = MsgBox("¿Desea ver la tabla de SOLPED's pendientes por aprobación?", vbYesNo, "StockTech Aprobación")
+        If r = vbYes Then
+            DataBaseUtils.GetExcelTable TSOLPEDs, refresh:=True
+            Call StringUtils.FiltrarTabla(TSOLPEDs, CampoDB(TSOLPEDs, spd_aprobacion), False)
+            Dim camposNoVis As Variant
+            camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_costo, spd_no_factura, spd_orden_compra)
+            Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
+            Call Seguridad.LockSheet(ActiveSheet)
+            Exit Sub
+        End If
+    Else
         DataBaseUtils.GetExcelTable TSOLPEDs, refresh:=True
         Call StringUtils.FiltrarTabla(TSOLPEDs, CampoDB(TSOLPEDs, spd_aprobacion), False)
-        Dim camposNoVis As Variant
         camposNoVis = Array(spd_id_solicitud, spd_comentario, spd_costo, spd_no_factura, spd_orden_compra)
         Call StringUtils.OcultarColumnasTabla(TSOLPEDs, camposNoVis)
         Call Seguridad.LockSheet(ActiveSheet)
-        Exit Sub
     End If
     AprobacionSOLPED.Show
     DataBaseUtils.GetExcelTable TSOLPEDs, refresh:=True

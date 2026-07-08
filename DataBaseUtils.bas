@@ -70,7 +70,7 @@ Public Sub CloseDBConnection(Optional ByRef rs As ADODB.Recordset)
     End If
 End Sub
 
-Function AccionSQL(SQL As String) As Boolean
+Function AccionSQL(sql As String) As Boolean
     Dim conn As ADODB.Connection
     
     ' =======================================================
@@ -92,7 +92,7 @@ Function AccionSQL(SQL As String) As Boolean
     ' =======================================================
     ' Disparamos el comando hacia el motor de base de datos.
     ' Al no esperar datos de regreso, no instanciamos ningún Recordset.
-    conn.Execute SQL
+    conn.Execute sql
     
     ' 4. Confirmación de Éxito
     AccionSQL = True
@@ -115,7 +115,7 @@ ErrorHandler:
                "Consulte a un administrador del sistema.", vbCritical, "Fallo Crítico"
                
         ' Trazabilidad exacta del fallo para el equipo de soporte
-        App.SystemError "Error SQL: " & Err.Description & " | Comando: " & SQL
+        App.SystemError "Error SQL: " & Err.Description & " | Comando: " & sql
     End If
     
     ' 6. Confirmación de Fallo
@@ -125,14 +125,14 @@ End Function
 Function DatoDataBase(ByVal tabla As String, ByVal Filtro As String, ByVal valorBuscado As Variant, ByVal Resultado As String) As Variant
     Dim conn As ADODB.Connection
     Dim rs As ADODB.Recordset
-    Dim SQL As String
+    Dim sql As String
     Dim criterio As String
     
     ' 1. Casteo Dinámico para Access SQL
     criterio = ConsultasSQL.FormatoSQL(valorBuscado)
     
     ' 2. Construcción de la Consulta SQL
-    SQL = "SELECT [" & Resultado & "] FROM [" & tabla & "] " & _
+    sql = "SELECT [" & Resultado & "] FROM [" & tabla & "] " & _
           "WHERE [" & Filtro & "] = " & CStr(criterio)
           
     On Error GoTo ManejadorErrores
@@ -144,7 +144,7 @@ Function DatoDataBase(ByVal tabla As String, ByVal Filtro As String, ByVal valor
     Set rs = New ADODB.Recordset
     
     ' 3 = adOpenStatic, 1 = adLockReadOnly
-    rs.Open SQL, conn, 3, 1
+    rs.Open sql, conn, 3, 1
     
     If Not rs.EOF Then
         DatoDataBase = rs.Fields(Resultado).Value ' Se obtiene solo el valor
@@ -163,7 +163,7 @@ SalidaSegura:
 ManejadorErrores:
     ' Tu lógica intacta
     MsgBox "Error con la obtención de información de la Base de Datos", vbCritical, "Error StockTech"
-    Call App.SystemError("Error en DatoDataBase: " & Err.Description & vbNewLine & SQL)
+    Call App.SystemError("Error en DatoDataBase: " & Err.Description & vbNewLine & sql)
     DatoDataBase = Empty
     Resume SalidaSegura
 End Function
@@ -175,7 +175,7 @@ Function TableDataBase(ByVal tabla As String, _
     
     Dim conn As ADODB.Connection
     Dim rs As ADODB.Recordset
-    Dim SQL As String
+    Dim sql As String
     Dim vDatos As Variant, vFinal As Variant
     Dim i As Long, j As Long, numCols As Long, numFilas As Long
 
@@ -185,15 +185,15 @@ Function TableDataBase(ByVal tabla As String, _
     Set rs = New ADODB.Recordset
     
     ' Construcción dinámica de SQL
-    SQL = "SELECT " & IIf(columna = "*", "*", "[" & columna & "]") & " FROM [" & tabla & "]"
+    sql = "SELECT " & IIf(columna = "*", "*", "[" & columna & "]") & " FROM [" & tabla & "]"
     
     ' Inyección del filtro si el parámetro 'criterio' no está vacío
     If Trim(criterio) <> "" Then
-        SQL = SQL & " WHERE " & criterio
+        sql = sql & " WHERE " & criterio
     End If
     
     ' Abrimos Recordset: adOpenStatic (3), adLockReadOnly (1)
-    rs.Open SQL, conn, 3, 1
+    rs.Open sql, conn, 3, 1
     
     If Not rs.EOF Then
         numCols = rs.Fields.Count - 1
@@ -202,7 +202,7 @@ Function TableDataBase(ByVal tabla As String, _
             ' Capturamos nombres antes de que GetRows mueva el cursor
             ReDim vHeader(0 To numCols)
             For i = 0 To numCols
-                vHeader(i) = rs.Fields(i).Name
+                vHeader(i) = rs.Fields(i).name
             Next i
             
             vDatos = rs.GetRows
@@ -242,7 +242,7 @@ CleanExit:
 ErrorHandler:
     ' Registro de errores profesional
     App.SystemError "Error en TableDataBase - Proyecto StockTech"
-    App.SystemError "SQL: " & SQL
+    App.SystemError "SQL: " & sql
     App.SystemError "Descripción: " & Err.Description
     TableDataBase = Empty
     Resume CleanExit
@@ -253,19 +253,19 @@ Function QueryTableConsult(ByVal Tabla1 As String, ByVal Tabla2 As String, ByVal
                            Optional ByVal valorBuscado As String = "") As Variant
     
     Dim conn As ADODB.Connection
-    Dim SQL As String
+    Dim sql As String
     
     todosCampos = StringUtils.CrearCamposSQLTablas(CamposTabla2, CamposTabla1)
     
     ' 1. Armamos la base de la consulta (El JOIN principal)
-    SQL = "SELECT " & todosCampos & " " & _
+    sql = "SELECT " & todosCampos & " " & _
           "FROM [" & Tabla1 & "] AS U " & _
           "INNER JOIN [" & Tabla2 & "] AS P " & _
           "ON U.[" & Relacion & "] = P.[" & Relacion & "]"
           
     ' 2. Agregamos la cláusula WHERE solo si se proporcionaron los parámetros
     If Trim(Filtro) <> "" And Trim(valorBuscado) <> "" Then
-        SQL = SQL & " WHERE U.[" & Filtro & "] = '" & valorBuscado & "'"
+        sql = sql & " WHERE U.[" & Filtro & "] = '" & valorBuscado & "'"
     End If
 
     On Error GoTo ErrorHandler
@@ -275,7 +275,7 @@ Function QueryTableConsult(ByVal Tabla1 As String, ByVal Tabla2 As String, ByVal
     Set rs = New ADODB.Recordset
     
     ' Ejecutamos (0 = adOpenForwardOnly, 1 = adLockReadOnly)
-    rs.Open SQL, conn, 3, 1
+    rs.Open sql, conn, 3, 1
     
     If Not rs.EOF Then
         QueryTableConsult = rs.GetRows()
@@ -292,12 +292,12 @@ limpieza:
 
 ErrorHandler:
     MsgBox "Ha ocurrido un error. Consulte a un Administrador del Sistema", vbCritical
-    App.SystemError ("Error en QueryTableConsult: " & Err.Description & vbCrLf & "SQL: " & SQL)
+    App.SystemError ("Error en QueryTableConsult: " & Err.Description & vbCrLf & "SQL: " & sql)
     QueryTableConsult = Empty
     Resume limpieza
 End Function
 Function AddNewUser(nombre As String, usuario As String, correo As String, nivel As String, contrasena As String) As Boolean
-    Dim SQL As String
+    Dim sql As String
     Dim checkSQL As String
     Dim matrizAuditoria As Variant
     Dim usuariosEncontrados As Long
@@ -339,7 +339,7 @@ Function AddNewUser(nombre As String, usuario As String, correo As String, nivel
 End Function
 
 Function DeleteUser(usuario As String) As Boolean
-    Dim SQL As String
+    Dim sql As String
     Dim respuesta As VbMsgBoxResult
     
     ' =======================================================
@@ -370,14 +370,14 @@ Function DeleteUser(usuario As String) As Boolean
     ' =======================================================
     ' Se estructura la instrucción SQL DELETE FROM filtrando estrictamente
     ' por el identificador único del usuario para evitar daños colaterales.
-    SQL = "DELETE FROM " & TUsuarios & " WHERE [" & CampoDB(TUsuarios, us_usuario) & "] = '" & usuario & "'"
+    sql = "DELETE FROM " & TUsuarios & " WHERE [" & CampoDB(TUsuarios, us_usuario) & "] = '" & usuario & "'"
     
     ' =======================================================
     ' PASO 4: EJECUCIÓN Y REGISTRO EN AUDITORÍA
     ' =======================================================
     ' Se envía la instrucción al motor principal. Si la base de datos lo elimina
     ' exitosamente, se registran los metadatos de la acción en el Audit Trail.
-    If AccionSQL(SQL) Then
+    If AccionSQL(sql) Then
         DeleteUser = True
         MsgBox "El usuario ha sido eliminado permanentemente del sistema.", vbInformation, "Gestión de Usuarios"
     End If
@@ -386,7 +386,7 @@ End Function
 Public Sub UserChanges(ByVal user As String, ByVal campo As CNameUsuarios, ByVal dato As Variant)
     Dim nombreColumna As String
     Dim valFinal As String
-    Dim SQL As String
+    Dim sql As String
     
     ' 1. Traducción del Enum
     Select Case campo
@@ -404,10 +404,10 @@ Public Sub UserChanges(ByVal user As String, ByVal campo As CNameUsuarios, ByVal
     valFinal = ConsultasSQL.FormatoSQL(dato)
     
     ' 3. Construcción del UPDATE
-    SQL = "UPDATE [Usuarios] SET [" & nombreColumna & "] = " & valFinal & " " & _
+    sql = "UPDATE [Usuarios] SET [" & nombreColumna & "] = " & valFinal & " " & _
           "WHERE [Usuario] = " & FormatoSQL(user) ' Reutilizamos la función para blindar el nombre de usuario
           
-    If AccionSQL(SQL) Then
+    If AccionSQL(sql) Then
         MsgBox "El campo [" & nombreColumna & "] ha sido actualizado.", vbInformation, "Gestión"
     End If
 End Sub
@@ -537,7 +537,7 @@ Public Function UniqueValues(ByVal columna As Variant, ByVal origenDatos As Vari
         Dim tabla As String
         Dim conn As ADODB.Connection
         Dim rs As ADODB.Recordset
-        Dim SQL As String
+        Dim sql As String
         Dim resultadoDB As Variant
         Dim lista() As Variant
         Dim Filas As Long, i As Long
@@ -559,12 +559,12 @@ Public Function UniqueValues(ByVal columna As Variant, ByVal origenDatos As Vari
         End If
         
         ' 2. Petición SQL optimizada
-        SQL = "SELECT DISTINCT [" & columna & "] FROM [" & tabla & "] WHERE [" & columna & "] IS NOT NULL"
+        sql = "SELECT DISTINCT [" & columna & "] FROM [" & tabla & "] WHERE [" & columna & "] IS NOT NULL"
               
         ' 3. Ejecución
         Set conn = DataBaseUtils.GetDBConnection()
         Set rs = New ADODB.Recordset
-        rs.Open SQL, conn, 0, 1
+        rs.Open sql, conn, 0, 1
             
         ' 4. Extracción
         If Not rs.EOF Then
@@ -678,7 +678,7 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
     ' 1 = adOpenKeyset, 3 = adLockOptimistic
     rs.Open "SELECT * FROM [" & tabla & "]", con, 1, 3
     
-    ColumnaIdName = rs.Fields(0).Name
+    ColumnaIdName = rs.Fields(0).name
     strModificados = ""
     strNuevos = ""
 
@@ -702,11 +702,11 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
                 If columna.Index <> 1 Then
                     valCelda = columna.DataBodyRange(filaTable).Value
                     
-                    If CStr(rs.Fields(columna.Name).Value & "") <> CStr(valCelda & "") Then
+                    If CStr(rs.Fields(columna.name).Value & "") <> CStr(valCelda & "") Then
                         If Trim(CStr(valCelda)) = "" Then
-                            rs.Fields(columna.Name).Value = Null
+                            rs.Fields(columna.name).Value = Null
                         Else
-                            rs.Fields(columna.Name).Value = valCelda
+                            rs.Fields(columna.name).Value = valCelda
                         End If
                         filaNecesitaUpdate = True
                     End If
@@ -729,9 +729,9 @@ Public Function UpdateTable(ByVal tabla As String, Optional Silencio As Boolean 
                     valCelda = columna.DataBodyRange(filaTable).Value
                     
                     If Trim(CStr(valCelda)) = "" Then
-                        rs.Fields(columna.Name).Value = Null
+                        rs.Fields(columna.name).Value = Null
                     Else
-                        rs.Fields(columna.Name).Value = valCelda
+                        rs.Fields(columna.name).Value = valCelda
                     End If
                 End If
             Next columna
@@ -867,7 +867,7 @@ Public Function GetExcelTable(ByVal nombreTabla As String, _
     ' 3. Creación de la Hoja
     Seguridad.UnlockBook
     Set ws = ActiveWorkbook.Sheets.Add(After:=ActiveWorkbook.Sheets(ActiveWorkbook.Sheets.Count))
-    ws.Name = nombreTabla
+    ws.name = nombreTabla
     Seguridad.LockBook
     Call Seguridad.MarkStockTechSheet(ws)
 
@@ -887,7 +887,7 @@ Public Function GetExcelTable(ByVal nombreTabla As String, _
 
     ' 6. Conversión a ListObject (Tabla oficial de Excel)
     Set lo = ws.ListObjects.Add(xlSrcRange, ws.Range("A1").CurrentRegion, , xlYes)
-    lo.Name = Replace(nombreTabla, " ", "_")
+    lo.name = Replace(nombreTabla, " ", "_")
     lo.TableStyle = "TableStyleMedium2"
 
     ' =======================================================
@@ -932,7 +932,7 @@ End Function
 
 Public Function AddRegister(ByVal tabla As String, ByVal campos As Variant, ByVal valores As Variant) As Boolean
     Dim conn As Object
-    Dim SQL As String
+    Dim sql As String
     Dim strCampos As String
     Dim strValores As String
     Dim i As Long
@@ -968,14 +968,14 @@ Public Function AddRegister(ByVal tabla As String, ByVal campos As Variant, ByVa
     strCampos = Left(strCampos, Len(strCampos) - 2)
     strValores = Left(strValores, Len(strValores) - 2)
 
-    SQL = "INSERT INTO [" & tabla & "] (" & strCampos & ") VALUES (" & strValores & ")"
+    sql = "INSERT INTO [" & tabla & "] (" & strCampos & ") VALUES (" & strValores & ")"
 
     On Error GoTo ErrorHandler
     Set conn = GetDBConnection()
     
     If conn.State = 0 Then conn.Open
     
-    conn.Execute SQL
+    conn.Execute sql
     AddRegister = True
 
 limpieza:
@@ -987,7 +987,7 @@ limpieza:
     Exit Function
 
 ErrorHandler:
-    App.SystemError "Error en inserción DB: " & Err.Description & vbCrLf & "SQL Generado: " & SQL
+    App.SystemError "Error en inserción DB: " & Err.Description & vbCrLf & "SQL Generado: " & sql
     AddRegister = False
     Resume limpieza
 End Function
@@ -996,7 +996,7 @@ Public Function SetRegister(ByVal tabla As String, _
                             ByVal camposWhere As Variant, ByVal valoresWhere As Variant) As Boolean
                             
     Dim conn As Object
-    Dim SQL As String
+    Dim sql As String
     Dim strSet As String
     Dim strWhere As String
     Dim i As Long
@@ -1043,13 +1043,13 @@ Public Function SetRegister(ByVal tabla As String, _
     ' =======================================================
     ' 4. ENSAMBLAJE SQL Y EJECUCIÓN
     ' =======================================================
-    SQL = "UPDATE [" & tabla & "] SET " & strSet & " WHERE " & strWhere
+    sql = "UPDATE [" & tabla & "] SET " & strSet & " WHERE " & strWhere
 
     On Error GoTo ErrorHandler
     Set conn = GetDBConnection()
     
     If conn.State = 0 Then conn.Open
-    conn.Execute SQL
+    conn.Execute sql
     SetRegister = True
 
 limpieza:
@@ -1061,18 +1061,18 @@ limpieza:
     Exit Function
 
 ErrorHandler:
-    App.SystemError "Error en actualización DB: " & Err.Description & vbCrLf & "SQL Generado: " & SQL
+    App.SystemError "Error en actualización DB: " & Err.Description & vbCrLf & "SQL Generado: " & sql
     SetRegister = False
     Resume limpieza
 End Function
-Function ConsultaSQL(SQL As String, con As ADODB.Connection) As ADODB.Recordset
+Function ConsultaSQL(sql As String, con As ADODB.Connection) As ADODB.Recordset
     Dim rs As ADODB.Recordset
     Set rs = New ADODB.Recordset
     
     
     On Error GoTo ErrorHandler
 
-    rs.Open SQL, con, 3, 1
+    rs.Open sql, con, 3, 1
     
     
     Set ConsultaSQL = rs
@@ -1094,22 +1094,22 @@ End Sub
 Public Function GetColumnName(ByVal tabla As String, ByVal indiceColumna As Integer) As String
     Dim conn As ADODB.Connection
     Dim rs As ADODB.Recordset
-    Dim SQL As String
+    Dim sql As String
     
     ' Mantenemos TOP 1 para que el motor SQL no trabaje de más leyendo datos
-    SQL = "SELECT TOP 1 * FROM [" & tabla & "]"
+    sql = "SELECT TOP 1 * FROM [" & tabla & "]"
     
     On Error GoTo ManejadorErrores
     
     Set conn = GetDBConnection()
     Set rs = New ADODB.Recordset
-    rs.Open SQL, conn, adOpenStatic, adLockReadOnly
+    rs.Open sql, conn, adOpenStatic, adLockReadOnly
     
     ' --- VALIDACIÓN DE INTEGRIDAD (Fuera de Rango) ---
     If rs.Fields.Count > 0 Then
         ' Verificamos que el índice solicitado realmente exista en la tabla
         If indiceColumna >= 0 And indiceColumna < rs.Fields.Count Then
-            GetColumnName = rs.Fields(indiceColumna).Name
+            GetColumnName = rs.Fields(indiceColumna).name
         Else
             MsgBox "Error de rango: La tabla '" & tabla & "' tiene " & rs.Fields.Count & _
                    " columnas. (Índices válidos del 0 al " & rs.Fields.Count - 1 & ").", _
@@ -1127,14 +1127,14 @@ SalidaSegura:
 ManejadorErrores:
     MsgBox "No se pudo obtener el esquema de la tabla: " & tabla, vbCritical
     
-    App.SystemError ("Error con la conexión o el SQL: " & SQL)
+    App.SystemError ("Error con la conexión o el SQL: " & sql)
     ObtenerNombreColumna = ""
     Resume SalidaSegura
 End Function
 Public Function DeleteRegisterByID(ByVal tabla As String, ByVal valorID As Variant) As Boolean
     Const PROC_NAME As String = "DeleteRegisterByID"
     Dim conn As Object
-    Dim SQL As String
+    Dim sql As String
     Dim valFinal As String
     Dim registrosAfectados As Long
     Dim columnID As String
@@ -1159,14 +1159,14 @@ Public Function DeleteRegisterByID(ByVal tabla As String, ByVal valorID As Varia
     End Select
 
     ' 2. Construcción de la sentencia DELETE (Corregido a columnID)
-    SQL = "DELETE FROM [" & tabla & "] WHERE [" & columnID & "] = " & valFinal
+    sql = "DELETE FROM [" & tabla & "] WHERE [" & columnID & "] = " & valFinal
 
     On Error GoTo ErrorHandler
     Set conn = GetDBConnection()
     If conn.State = 0 Then conn.Open
     
     ' 3. Ejecución
-    conn.Execute SQL, registrosAfectados
+    conn.Execute sql, registrosAfectados
     
     If registrosAfectados > 0 Then
         DeleteRegisterByID = True
@@ -1183,14 +1183,14 @@ limpieza:
     Exit Function
 
 ErrorHandler:
-    App.SystemError "Error en eliminación DB: " & Err.Description & vbCrLf & "SQL Generado: " & SQL
+    App.SystemError "Error en eliminación DB: " & Err.Description & vbCrLf & "SQL Generado: " & sql
     DeleteRegisterByID = False
     Resume limpieza
 End Function
 Public Function SetDataByID(ByVal tabla As String, ByVal campos As Variant, ByVal valores As Variant, ByVal valorID As Variant) As Boolean
     Const PROC_NAME As String = "SetDataByID"
     Dim conn As Object
-    Dim SQL As String
+    Dim sql As String
     Dim strSet As String
     Dim i As Long
     Dim valFinal As String
@@ -1234,13 +1234,13 @@ Public Function SetDataByID(ByVal tabla As String, ByVal campos As Variant, ByVa
     End Select
 
     ' 4. Ensamblaje de la Sentencia SQL Final (Corregido a columnID)
-    SQL = "UPDATE [" & tabla & "] SET " & strSet & " WHERE [" & columnID & "] = " & idFinal
+    sql = "UPDATE [" & tabla & "] SET " & strSet & " WHERE [" & columnID & "] = " & idFinal
 
     On Error GoTo ErrorHandler
     Set conn = GetDBConnection()
     If conn.State = 0 Then conn.Open
     
-    conn.Execute SQL, registrosAfectados
+    conn.Execute sql, registrosAfectados
     
     If registrosAfectados > 0 Then
         SetDataByID = True ' Corregido el nombre de retorno
@@ -1257,22 +1257,22 @@ limpieza:
     Exit Function
 
 ErrorHandler:
-    App.SystemError "Error en actualización DB: " & Err.Description & vbCrLf & "SQL Generado: " & SQL
+    App.SystemError "Error en actualización DB: " & Err.Description & vbCrLf & "SQL Generado: " & sql
     SetDataByID = False ' Corregido el nombre de retorno
     Resume limpieza
 End Function
 Public Function GetLastIdFromDB(ByVal nombreTabla As String, ByVal nombreColumnaID As String) As Long
     Const PROC_NAME As String = "GetLastIdFromDB"
     Dim rs As Object
-    Dim SQL As String
+    Dim sql As String
     
     On Error GoTo ErrorHandler
     
-    SQL = "SELECT IIf(IsNull(MAX([" & nombreColumnaID & "])), 0, MAX([" & nombreColumnaID & "])) " & _
+    sql = "SELECT IIf(IsNull(MAX([" & nombreColumnaID & "])), 0, MAX([" & nombreColumnaID & "])) " & _
           "FROM [" & nombreTabla & "]"
     
     ' Ejecutamos la consulta
-    Set rs = DataBaseUtils.ConsultaSQL(SQL, DataBaseUtils.GetDBConnection)
+    Set rs = DataBaseUtils.ConsultaSQL(sql, DataBaseUtils.GetDBConnection)
     
     If Not rs.EOF Then
         GetLastIdFromDB = CLng(rs.Fields(0).Value)
@@ -1294,7 +1294,7 @@ ErrorHandler:
     GetLastIdFromDB = -1 ' Devolvemos -1 para indicar un error técnico de conexión
     Resume limpieza
 End Function
-Public Function GetFromSQL(SQL As String, Optional WithHeaders As Boolean = False) As Variant
+Public Function GetFromSQL(sql As String, Optional WithHeaders As Boolean = False) As Variant
     Const PROC_NAME As String = "GetFromSQL"
     Dim conn As ADODB.Connection
     Dim rs As ADODB.Recordset
@@ -1307,7 +1307,7 @@ Public Function GetFromSQL(SQL As String, Optional WithHeaders As Boolean = Fals
     Set conn = GetDBConnection()
     Set rs = New ADODB.Recordset
     
-    rs.Open SQL, conn, 3, 1
+    rs.Open sql, conn, 3, 1
     
     If Not rs.EOF Then
         numCols = rs.Fields.Count - 1
@@ -1316,7 +1316,7 @@ Public Function GetFromSQL(SQL As String, Optional WithHeaders As Boolean = Fals
             
             ReDim vHeader(0 To numCols)
             For i = 0 To numCols
-                vHeader(i) = rs.Fields(i).Name
+                vHeader(i) = rs.Fields(i).name
             Next i
             
             vDatos = rs.GetRows
@@ -1356,7 +1356,7 @@ CleanExit:
 ErrorHandler:
     ' Registro de errores profesional
     App.SystemError "Error en GetFromSQL - Proyecto StockTech"
-    App.SystemError "SQL: " & SQL
+    App.SystemError "SQL: " & sql
     App.SystemError "Descripción: " & Err.Description
     GetFromSQL = Empty
     Resume CleanExit

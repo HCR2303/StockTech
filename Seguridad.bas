@@ -207,7 +207,7 @@ Function LockSheet(ByVal sh As Worksheet, Optional ByVal Rango As Range)
     ' UserInterfaceOnly:=True es la directiva más crítica de StockTech:
     ' Bloquea al usuario humano, pero permite que las macros operen sin
     ' tener que desproteger la hoja constantemente.
-    If sh.Name = TAuditTrail Then
+    If sh.name = TAuditTrail Then
         sh.Protect password:=pass, _
                    UserInterfaceOnly:=True, _
                    AllowFiltering:=True, _
@@ -316,11 +316,11 @@ Public Sub MarkStockTechSheet(ByVal ws As Worksheet)
     
     ' 1. Limpiamos cualquier marca previa para evitar duplicados en memoria
     For Each prop In ws.CustomProperties
-        If prop.Name = "Origin" Then prop.Delete
+        If prop.name = "Origin" Then prop.Delete
     Next prop
     
     ' 2. Estampamos la marca única
-    ws.CustomProperties.Add Name:="Origin", Value:="StockTech"
+    ws.CustomProperties.Add name:="Origin", Value:="StockTech"
     
     On Error GoTo 0
 End Sub
@@ -332,7 +332,7 @@ Public Sub UnmarkStockTechSheet(ByVal ws As Worksheet)
     
     For Each prop In ws.CustomProperties
         
-        If prop.Name = "Origin" Then
+        If prop.name = "Origin" Then
             
             prop.Delete
             
@@ -351,9 +351,9 @@ Public Function GetStockTechSheetName(ByVal ws As Worksheet) As String
     On Error Resume Next
     For Each prop In ws.CustomProperties
         ' Usamos UCase para asegurar la lectura sin importar cómo se guardó
-        If UCase(prop.Name) = "ORIGIN" And UCase(prop.Value) = "STOCKTECH" Then
+        If UCase(prop.name) = "ORIGIN" And UCase(prop.Value) = "STOCKTECH" Then
             ' 3. Si la encontramos, asignamos el nombre de la hoja a la función
-            GetStockTechSheetName = ws.Name
+            GetStockTechSheetName = ws.name
             Exit For
         End If
     Next prop

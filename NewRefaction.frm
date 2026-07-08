@@ -109,7 +109,7 @@ Private Sub NuevaRefaccion_Click()
     If DataBaseUtils.LogDB("Creación", "Refacción Nueva: " & UCase(Codigo.Text), "Se crea Refacción nueva, Codigo: " & Codigo.Text, True) Then
         If DataBaseUtils.AddRegister(TRefacciones, campos, valores) Then
             RegistroRefaccion = True
-            If ActiveSheet.Name <> TSolicitudes Then
+            If ActiveSheet.name <> TSolicitudes Then
                 MsgBox "Refacción creada con éxito.", vbInformation, "Administración de Base de Datos"
                 verificar = MsgBox("¿Desea verificar la información?", vbYesNo)
                 

@@ -10,6 +10,7 @@ Public Enum CNameSolicitudes
     sol_unidades = 5
     sol_realizada = 6
     sol_comentarios = 7
+    sol_mantenimiento = 8
 End Enum
 
 Public Enum CNameUsuarios
@@ -111,19 +112,20 @@ Public Enum CNameSOLPEDs
     spd_id = 0
     spd_solped = 1
     spd_cuenta = 2
-    spd_codigo_equipo = 3
-    SPD_REFACCION = 4
-    spd_proveedor = 5
-    spd_proveedor_unico = 6
-    spd_orden_compra = 7
-    spd_no_factura = 8
-    spd_unidades = 9
-    spd_costo = 10
-    spd_capturo = 11
-    spd_id_solicitud = 12
-    spd_uso = 13
-    spd_aprobacion = 14
-    spd_comentario = 15
+    spd_codigo = 3
+    spd_proveedor = 4
+    spd_proveedor_unico = 5
+    spd_orden_compra = 6
+    spd_no_factura = 7
+    spd_unidades = 8
+    spd_costo = 9
+    spd_capturo = 10
+    spd_id_solicitud = 11
+    spd_uso = 12
+    spd_aprobacion = 13
+    spd_comentario = 14
+    spd_tipo = 15
+    spd_llegada = 16
 End Enum
 
 
@@ -170,7 +172,7 @@ End Enum
 
 ' TSolicitudes: tabla de registro de solicitud de SOLPED
 Public Const TSolicitudes As String = "Solicitudes"
-Public Const FieldsSolicitudes As String = "Id_Solicitud|Fecha|Usuario|Código|Tipo|Unidades|Realizada|Comentarios"
+Public Const FieldsSolicitudes As String = "Id_Solicitud|Fecha|Usuario|Código|Tipo|Unidades|Realizada|Comentarios|Mantenimiento"
 ' TPresupuestos: Tabla de presupuestos anuales cargada por el usuario
 Public Const TPresupuestos As String = "Presupuestos"
 Public Const FieldsPresupuestos As String = "Id|Centro de Costo|Id_Cuenta|Cuenta Anteriror|Presupuesto"
@@ -195,8 +197,9 @@ Public Const FieldsUbicaciones As String = "Id|Id_Ubicación|Indicador|Categoría|
 
 ' TSOLPEDs: Tabla de registro de SOLPEDs creadas con descripción por códigos
 Public Const TSOLPEDs As String = "SOLPEDs"
-Public Const FieldsSOLPEDs As String = "Id|SOLPED|Cuenta|Codigo de Equipo|Refacción|Proveedor|Proveedor Único|" & _
-                                        "Orden de Compra|No_Factura|Unidades|Costo|Capturo|Id_Solicitud|Uso|Aprobación por Gerente|Comentario Gerente"
+Public Const FieldsSOLPEDs As String = "Id|SOLPED|Cuenta|Código|Proveedor|Proveedor Único|" & _
+                                        "Orden de Compra|No_Factura|Unidades|Costo|Capturo|Id_Solicitud|Uso|" & _
+                                        "Aprobación por Gerente|Comentario Gerente|Tipo|Llegada"
 
 Public Const TUsuarios As String = "Usuarios"
 Public Const FieldsUsuarios As String = "Id|Nombre|Usuario|Correo|Nivel|Contraseña"

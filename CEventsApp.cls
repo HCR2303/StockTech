@@ -17,7 +17,7 @@ Private Sub StockTechApp_SheetSelectionChange(ByVal sh As Object, ByVal Target A
         ' 1. Verificamos que el ancla exista
         If Not Seguridad.LibroStockTech Is Nothing Then
             ' 2. ¿El clic fue en el libro anclado?
-            If sh.Parent.Name = Seguridad.LibroStockTech.Name Then
+            If sh.Parent.name = Seguridad.LibroStockTech.name Then
                 Call Seguridad.IniciarTemporizador
             End If
         End If
@@ -27,7 +27,7 @@ End Sub
 Private Sub StockTechApp_SheetChange(ByVal sh As Object, ByVal Target As Range)
     If ActiveStocktech = True Then
         If Not Seguridad.LibroStockTech Is Nothing Then
-            If sh.Parent.Name = Seguridad.LibroStockTech.Name Then
+            If sh.Parent.name = Seguridad.LibroStockTech.name Then
                 Call Seguridad.IniciarTemporizador
             End If
         End If
