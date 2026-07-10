@@ -1,7 +1,7 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} NewRefaction 
    Caption         =   "Nueva Refacción"
-   ClientHeight    =   2988
+   ClientHeight    =   3672
    ClientLeft      =   108
    ClientTop       =   456
    ClientWidth     =   4584
@@ -29,7 +29,7 @@ Function GetLists()
     If IsEmpty(crit) Then
         'MsgBox "Error de obteción de datos de CRITICIDAD", vbCritical
         Me.Criticidad.Visible = False
-        Me.CriticidadLabel.Visible = False
+        Me.CritLabel.Visible = False
     End If
     If IsEmpty(ubic) Then
         MsgBox "Error de obteción de datos de UBICACIÓN", vbCritical
@@ -84,7 +84,7 @@ Private Sub NuevaRefaccion_Click()
         campos = Array(CampoDB(tabla, sol_fecha), CampoDB(tabla, sol_usuario), CampoDB(tabla, sol_codigo), CampoDB(tabla, sol_tipo), CampoDB(tabla, sol_unidades), CampoDB(tabla, sol_comentarios))
         
         valores = Array(Now(), GetCurrentUser, "Solicitar Código", "REFACCIÓN", CInt(Me.Unidades.Text), "El usuario solicitó " & Me.Unidades.Text & " unidades de la REFACCIÓN: " & Me.Refaccion.Text & Chr(10) & "PRESENTACIÓN: " & Me.Presentación.Text & Chr(10) & _
-                                                                            "UBICACIÓN: " & Me.Ubicacion.Text & Chr(10) & "CRITICIDAD: No Aplica")
+                                                                            "Detalles: " & Me.Detalles.Text)
         If DataBaseUtils.LogDB("Solicitud", "Refacción Nueva: " & UCase(Me.Codigo.Text), "Se solicita Refacción nueva, Código: " & Me.Codigo.Text) Then
             If Not DataBaseUtils.AddRegister(TSolicitudes, campos, valores) Then
                 MsgBox "Error al crear refacción nueva. Contacte al administrador", vbCritical, "Error de conexión"
@@ -136,6 +136,14 @@ Private Sub UserForm_Activate()
         Me.UnidadesLabel.Visible = True
         Me.Codigo.Visible = False
         Me.CodigoLabel.Visible = False
+        Me.Detalles.Visible = True
+        Me.Detalles.Enabled = True
+        Me.CritLabel.Visible = False
+        Me.UbicLabel.Caption = "Más detalles"
+        Me.Ubicacion.Visible = False
+        Me.Ubicacion.Enabled = False
+        Me.Criticidad.Visible = False
+        Me.Criticidad.Enabled = False
     End If
     
 End Sub

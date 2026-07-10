@@ -421,11 +421,11 @@ Public Function SystemLogDB(ByVal accion As String, ByVal objetivo As String) As
     
     tabla = TAuditTrail
         
-    If DataBaseUtils.Auditoria("StockTech System", accion, objetivo, detalles) Then
+    If DataBaseUtils.Auditoria("StockTech System", accion, objetivo, Detalles) Then
         SystemLogDB = True
     End If
 End Function
-Public Function LogDB(ByVal accion As String, ByVal objetivo As String, ByVal detalles As String, Optional comentarios As Boolean = False) As Boolean
+Public Function LogDB(ByVal accion As String, ByVal objetivo As String, ByVal Detalles As String, Optional comentarios As Boolean = False) As Boolean
     Const PROC_NAME As String = "LogDB"
     
     Dim tabla As String
@@ -435,11 +435,11 @@ Public Function LogDB(ByVal accion As String, ByVal objetivo As String, ByVal de
     
     tabla = TAuditTrail
         
-    If DataBaseUtils.Auditoria(UCase(Environ("USERNAME")), accion, objetivo, detalles, comentarios) Then
+    If DataBaseUtils.Auditoria(UCase(Environ("USERNAME")), accion, objetivo, Detalles, comentarios) Then
         LogDB = True
     End If
 End Function
-Public Function Auditoria(ByVal usuario As String, ByVal accion As String, ByVal objetivo As String, ByVal detalles As String, Optional ByVal WithCommit As Boolean = False) As Boolean
+Public Function Auditoria(ByVal usuario As String, ByVal accion As String, ByVal objetivo As String, ByVal Detalles As String, Optional ByVal WithCommit As Boolean = False) As Boolean
     Const PROC_NAME As String = "Auditoria"
     Dim campos As Variant
     Dim valores As Variant
@@ -478,7 +478,7 @@ Public Function Auditoria(ByVal usuario As String, ByVal accion As String, ByVal
     campos = Array(CamposAudit(aud_usuario), CamposAudit(aud_fecha), CamposAudit(aud_accion), _
                     CamposAudit(aud_objetivo), CamposAudit(aud_detalles), CamposAudit(aud_comentario))
                     
-    valores = Array(usuario, Now(), accion, objetivo, detalles, comentarioFinal)
+    valores = Array(usuario, Now(), accion, objetivo, Detalles, comentarioFinal)
     
     If DataBaseUtils.AddRegister(TablasDB.TAuditTrail, campos, valores) Then
         Auditoria = True

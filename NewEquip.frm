@@ -74,7 +74,7 @@ Private Sub NuevoEquipo_Click()
         
         valores = Array(Now(), GetCurrentUser, "Solicitar Código", "EQUIPO", "El usuario solicitó un EQUIPO: " & Me.Equipo.Text & Chr(10) & "MARCA: " & Me.Marca.Text & Chr(10) & _
                                                                             "MODELO: " & Me.Modelo.Text & Chr(10) & "No. SERIE: " & Me.Serie.Text & Chr(10) & "UBICACIÓN: " & _
-                                                                            Me.Ubicacion.Text & Chr(10) & "CRITICIDAD: " & Me.Criticidad.Text)
+                                                                            "Detalles: " & Me.Detalles.Text)
         If DataBaseUtils.LogDB("Solicitud", "Equipo Nuevo: " & Codigo.Text, "Se solicita equipo nuevo, CÓDIGO: " & Codigo.Text, True) Then
             If Not DataBaseUtils.AddRegister(TSolicitudes, campos, valores) Then
                 DataBaseUtils.RollBack (TAuditTrail)
@@ -118,6 +118,14 @@ Private Sub UserForm_Activate()
         Me.Codigo.Enabled = False
         Me.Codigo.Visible = False
         Me.CodigoLabel.Visible = False
+        Me.Criticidad.Visible = False
+        Me.Criticidad.Enabled = False
+        Me.Ubicacion.Visible = False
+        Me.Ubicacion.Enabled = False
+        Me.UbicLabel.Visible = False
+        Me.CritLabel.Caption = "Más Detalles"
+        Me.Detalles.Visible = True
+        Me.Detalles.Enabled = True
     End If
 End Sub
 
